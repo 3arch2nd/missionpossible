@@ -31,23 +31,34 @@
         ul::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
         ul::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
-        /* 💡 항목 간격 좁히기: min-height 28px, 테두리 1px로 다이어트 */
-        li { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 28px; padding: 0; border-top: 1px solid transparent; border-bottom: 1px solid transparent; cursor: grab; transition: border 0.1s ease, transform 0.2s ease; box-sizing: border-box; background: #fff;}
+        /* 💡 항목 간격 더 좁히기 */
+        li { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0; border-top: 1px solid transparent; border-bottom: 1px solid transparent; cursor: grab; transition: border 0.1s ease, transform 0.2s ease; box-sizing: border-box; background: #fff;}
         li:active { cursor: grabbing; }
         
         li.drag-over-bottom { border-bottom: 1px solid #555 !important; }
         li.drag-over-top { border-top: 1px solid #555 !important; }
         
-        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; word-break: break-all; line-height: 1.3; padding-right: 10px; pointer-events: none;}
+        /* 💡 스와이프 전용 투명 손잡이 (왼쪽에 배치) */
+        .swipe-handle {
+            width: 20px;
+            height: 100%;
+            position: absolute;
+            left: -20px; /* 아이템의 왼쪽 바깥으로 살짝 빼둠 */
+            top: 0;
+            background: transparent;
+            z-index: 10;
+        }
+        
+        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-right: 10px; margin-left: 5px; pointer-events: none;}
         .editable { cursor: text; padding: 0 2px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; pointer-events: auto;}
         .editable:hover, .editable:focus { border-bottom: 1px dashed #aaa; outline: none; }
         
-        /* 💡 해치운 일 전용 스타일 (더욱 콤팩트하게) */
-        .task-done-item { color: #888; cursor: default; min-height: 22px; padding: 0; } 
+        /* 해치운 일 전용 스타일 (초 압축) */
+        .task-done-item { color: #888; cursor: default; min-height: 20px; margin-bottom: 2px;} 
         .task-done-item .task-content { font-size: 14px; line-height: 0.88; }
         .task-done-item .btn-del { font-size: 16px; padding: 0; }
         
-        h3.section-title { margin: 10px 0 10px 30px; font-size: 16px; color: #555; flex-shrink: 0; }
+        h3.section-title { margin: 10px 0 5px 30px; font-size: 16px; color: #555; flex-shrink: 0; }
 
         .profile-img { height: 200px; background-color: #eef; border-bottom: 1px solid #eee; background-image: url('assets/1.png'); background-size: cover; background-position: center; background-repeat: no-repeat; }
         
@@ -77,8 +88,8 @@
             #main-content { padding: 15px; }
             .notebook { padding: 30px 15px 20px 15px; }
             .input-group { gap: 5px; margin-left: 20px; width: calc(100% - 20px); }
-            ul { margin-left: 20px; max-height: 30vh; }
-            h3.section-title { margin-left: 20px; font-size: 15px; }
+            ul { margin-left: 25px; max-height: 30vh; }
+            h3.section-title { margin-left: 25px; font-size: 15px; }
         }
 
         @media (max-width: 480px) {
@@ -86,8 +97,8 @@
             input[type="text"] { font-size: 13px; padding: 3px; }
             .btn { font-size: 13px; padding: 4px 10px; }
             .btn-urgent { font-size: 14px; padding: 0 2px;}
-            /* 💡 모바일에서도 간격 최소화 */
-            li { min-height: 24px; }
+            
+            li { min-height: 22px; } /* 모바일에서 더 꽉 조임 */
             
             .btn-done-mobile-hide { display: none; }
         }
@@ -188,12 +199,10 @@
                 li.addEventListener('dragleave', handleDragLeave); 
                 li.addEventListener('drop', handleDrop);
                 
-                addSwipeListener(li);
-
                 const fireClass = task.isUrgent ? 'active' : '';
                 
                 li.innerHTML = `
-                    <div class="task-content">
+                    <div class="swipe-handle"></div> <div class="task-content">
                         <button class="btn-urgent ${fireClass}" onclick="toggleUrgent(${task.id})" title="급한 일 표시" style="pointer-events:auto;">🔥</button>
                         <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'what', this.innerText)">${task.what}</span> 
                         <span>-></span> 
@@ -205,40 +214,41 @@
                         <button class="btn btn-del" onclick="deleteTodo(${task.id})">×</button>
                     </div>
                 `;
+                
+                // 스와이프 이벤트는 손잡이에만 부착
+                addSwipeListener(li);
+                
                 li.querySelectorAll('.editable').forEach(el => el.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); el.blur(); }}));
                 todoListEl.appendChild(li);
             });
         }
 
-        // 💡 향상된 스와이프 로직
+        // 💡 손잡이(swipe-handle)에만 반응하는 스와이프 로직
         function addSwipeListener(li) {
+            const handle = li.querySelector('.swipe-handle');
+            if(!handle) return;
+            
             let startX = 0;
             let currentX = 0;
             let isSwiping = false;
 
-            li.addEventListener('touchstart', (e) => {
-                if(e.target.classList.contains('editable') || e.target.tagName === 'BUTTON') return;
-                
-                const rect = li.getBoundingClientRect();
+            handle.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
-                
-                // 💡 왼쪽 영역(약 80px 이내)을 터치했을 때만 스와이프 발동 허용
-                if (startX - rect.left > 80) return;
-
                 isSwiping = true;
                 li.style.transition = 'none'; 
             }, {passive: true});
 
-            li.addEventListener('touchmove', (e) => {
+            handle.addEventListener('touchmove', (e) => {
                 if (!isSwiping) return;
                 currentX = e.touches[0].clientX - startX;
                 
+                // 우측으로만 스와이프 허용
                 if (currentX > 0) {
                     li.style.transform = `translateX(${currentX}px)`;
                 }
             }, {passive: true});
 
-            li.addEventListener('touchend', (e) => {
+            handle.addEventListener('touchend', (e) => {
                 if (!isSwiping) return;
                 isSwiping = false;
                 li.style.transition = 'transform 0.2s ease'; 

@@ -22,7 +22,7 @@
         .btn-done:hover { background-color: #555; }
         .btn-del { background-color: transparent; color: #ff4d4d; font-size: 18px; padding: 0 5px;}
         
-        .btn-urgent { background-color: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s; }
+        .btn-urgent { background-color: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s; position: relative; z-index: 30; }
         .btn-urgent.active { opacity: 1; }
         
         ul { list-style: none; padding: 0 5px 0 0; margin: 0 0 0 30px; max-height: 28vh; overflow-y: auto; overflow-x: hidden; flex-shrink: 1; }
@@ -37,19 +37,20 @@
         li.drag-over-bottom { border-bottom: 1px solid #555 !important; }
         li.drag-over-top { border-top: 1px solid #555 !important; }
         
-        /* 💡 투명 손잡이 (안쪽으로 안전하게 배치!) */
+        /* 💡 투명 손잡이를 글씨를 밀지 않고 띄워서 왼쪽 영역을 덮도록 설정 */
         .swipe-handle {
-            width: 30px;
+            width: 40px; /* 불꽃 아이콘 근처 영역 커버 */
             height: 100%;
             position: absolute;
             left: 0;
             top: 0;
             background: transparent;
-            z-index: 20; /* 수정 글씨보다 우선순위 높게 */
+            z-index: 20; 
         }
         
-        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-right: 10px; pointer-events: none;}
-        .editable { cursor: text; padding: 0 2px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; pointer-events: auto;}
+        /* 💡 margin-left를 없애서 텍스트 영역을 왼쪽으로 쫙 당김! */
+        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-right: 10px; pointer-events: none; position: relative;}
+        .editable { cursor: text; padding: 0 2px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; pointer-events: auto; position: relative; z-index: 30; }
         .editable:hover, .editable:focus { border-bottom: 1px dashed #aaa; outline: none; }
         
         .task-done-item { color: #888; cursor: default; min-height: 20px; margin-bottom: 2px;} 
@@ -86,8 +87,8 @@
             #main-content { padding: 15px; }
             .notebook { padding: 30px 15px 20px 15px; }
             .input-group { gap: 5px; margin-left: 20px; width: calc(100% - 20px); }
-            ul { margin-left: 25px; max-height: 30vh; }
-            h3.section-title { margin-left: 25px; font-size: 15px; }
+            ul { margin-left: 20px; max-height: 30vh; }
+            h3.section-title { margin-left: 20px; font-size: 15px; }
         }
 
         @media (max-width: 480px) {
@@ -197,11 +198,11 @@
 
                 const fireClass = task.isUrgent ? 'active' : '';
                 
-                // 💡 손잡이 공간을 확보하기 위해 task-content에 margin-left: 30px 적용
+                // 💡 margin-left 제거, 손잡이는 absolute로 띄움!
                 li.innerHTML = `
                     <div class="swipe-handle"></div>
-                    <div class="task-content" style="margin-left: 30px;">
-                        <button class="btn-urgent ${fireClass}" onclick="toggleUrgent(${task.id})" title="급한 일 표시" style="pointer-events:auto;">🔥</button>
+                    <div class="task-content">
+                        <button class="btn-urgent ${fireClass}" onclick="toggleUrgent(${task.id})" title="급한 일 표시">🔥</button>
                         <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'what', this.innerText)">${task.what}</span> 
                         <span>-></span> 
                         <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'whom', this.innerText)">${task.whom}</span> 
@@ -219,7 +220,6 @@
             });
         }
 
-        // 💡 손잡이 터치 로직 개선
         function addSwipeListener(li) {
             const handle = li.querySelector('.swipe-handle');
             if(!handle) return;
@@ -228,25 +228,22 @@
             let currentX = 0;
             let isSwiping = false;
 
-            // 터치 시작은 무조건 '손잡이'에서만 발동
             handle.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
                 isSwiping = true;
                 li.style.transition = 'none'; 
             }, {passive: true});
 
-            // 드래그 중에는 전체 항목(li)을 기준으로 움직임 계산
-            li.addEventListener('touchmove', (e) => {
+            handle.addEventListener('touchmove', (e) => {
                 if (!isSwiping) return;
                 currentX = e.touches[0].clientX - startX;
                 
-                // 우측으로만 스와이프 허용
                 if (currentX > 0) {
                     li.style.transform = `translateX(${currentX}px)`;
                 }
             }, {passive: true});
 
-            li.addEventListener('touchend', (e) => {
+            handle.addEventListener('touchend', (e) => {
                 if (!isSwiping) return;
                 isSwiping = false;
                 li.style.transition = 'transform 0.2s ease'; 
@@ -287,9 +284,9 @@
             sortedDones.forEach(task => {
                 const li = document.createElement('li');
                 li.className = 'task-done-item';
-                // 완료 항목은 손잡이가 없으므로 그대로 30px 맞춤 여백 적용
+                // 완료 항목도 빈 공간 없이 바짝 밀착!
                 li.innerHTML = `
-                    <div class="task-content" style="padding-left: 30px;"> 
+                    <div class="task-content"> 
                         <span>${task.what}</span> <span>-></span> <span>${task.whom}</span> <span>(${task.when})</span>
                     </div>
                     <div style="flex-shrink: 0; pointer-events:auto;">

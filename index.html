@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>해치웠나!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Gowun Dodum', sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; display: flex; height: 100vh; overflow: hidden; color: #333; }
+        #sidebar { width: 320px; background-color: rgba(255, 255, 255, 0.95); box-shadow: 2px 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 1000; }
+        #main-content { flex: 1; padding: 40px; display: flex; justify-content: center; overflow-y: auto; box-sizing: border-box; }
+        
+        .notebook { width: 100%; max-width: 800px; background-color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius: 5px; padding: 60px 40px 40px 40px; background-image: repeating-linear-gradient(transparent, transparent 39px, #eaeaea 39px, #eaeaea 40px); line-height: 40px; position: relative; border-left: 1px solid #ddd; box-sizing: border-box; }
+        .notebook::before { content: ''; position: absolute; left: 10px; top: 20px; bottom: 20px; width: 10px; background-image: radial-gradient(circle, #f4f4f9 4px, transparent 5px); background-size: 10px 40px; }
+        
+        .input-group { display: flex; gap: 10px; margin-bottom: 30px; margin-left: 30px; width: calc(100% - 30px); box-sizing: border-box; }
+        input[type="text"] { font-family: 'Gowun Dodum', sans-serif; border: none; background: transparent; border-bottom: 1px solid #ccc; outline: none; font-size: 16px; padding: 5px; min-width: 0; }
+        
+        .btn { font-family: 'Gowun Dodum', sans-serif; background-color: #333; color: white; border: none; padding: 5px 15px; border-radius: 20px; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+        .btn:hover { background-color: #111; }
+        .btn-done { background-color: #777; font-size: 12px; color: white;}
+        .btn-done:hover { background-color: #555; }
+        .btn-del { background-color: transparent; color: #ff4d4d; font-size: 18px; padding: 0 5px;}
+        
+        .btn-urgent { background-color: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s; }
+        .btn-urgent.active { opacity: 1; }
+        
+        ul { list-style: none; padding: 0; margin-left: 30px; }
+        li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 5px 0; border-top: 2px solid transparent; border-bottom: 2px solid transparent; cursor: grab; transition: border 0.1s ease; box-sizing: border-box;}
+        li:active { cursor: grabbing; }
+        
+        li.drag-over-bottom { border-bottom: 2px solid #555 !important; }
+        li.drag-over-top { border-top: 2px solid #555 !important; }
+        
+        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; word-break: break-all; line-height: 1.4; padding-right: 15px; }
+        .editable { cursor: text; padding: 0 4px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; }
+        .editable:hover, .editable:focus { border-bottom: 1px dashed #aaa; outline: none; }
+        .task-done-item { color: #888; text-decoration: line-through; cursor: default; } 
+        
+        /* 💡 이미지 영역 수정 (정적 경로 사용) */
+        .profile-img { 
+            height: 200px; 
+            background-color: #eef; 
+            border-bottom: 1px solid #eee; 
+            background-image: url('assets/1.png'); /* 💡 로컬 자산 경로 고정 */
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+        }
+        
+        .calendar-container { padding: 20px; }
+        .github-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+        .day-box { aspect-ratio: 1; background-color: #f0f4f8; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; transition: transform 0.1s; }
+        .day-box:active { transform: scale(0.9); }
+        .lv-1 { background-color: #cce5ff; color: #333; }
+        .lv-2 { background-color: #66b2ff; color: white; }
+        .lv-3 { background-color: #0073e6; color: white; }
+        .lv-4 { background-color: #004080; color: white; }
+        
+        #toggle-btn { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 2000; background: rgba(51, 51, 51, 0.9); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); align-items: center; justify-content: center; }
+        
+        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; flex-direction: column; gap: 10px; }
+
+        @media (max-width: 1000px) {
+            #toggle-btn { display: flex; }
+            #sidebar { position: fixed; height: 100vh; transform: translateX(-100%); background-color: rgba(255, 255, 255, 0.95); }
+            #sidebar.open { transform: translateX(0); }
+            #main-content { padding: 20px; }
+            .notebook { padding: 40px 20px 20px 20px; }
+            .input-group { gap: 5px; }
+            input[type="text"] { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">수첩을 펴는 중입니다... ⏳</div>
+
+    <button id="toggle-btn">+</button>
+    <div id="sidebar">
+        <div class="profile-img" id="profile-container"></div>
+        <div class="calendar-container">
+            <h3>성취 달력 ✨</h3>
+            <p id="today-stats" style="font-size: 14px; color: #555;">달력 칸을 클릭해보세요.</p>
+            <div class="github-calendar" id="calendar-grid"></div>
+        </div>
+    </div>
+    <div id="main-content">
+        <div class="notebook">
+            <div class="input-group">
+                <input type="text" id="what" placeholder="무엇을" style="flex: 2;">
+                <input type="text" id="whom" placeholder="누구에게" style="flex: 1;">
+                <input type="text" id="when" placeholder="언제까지" style="flex: 1;">
+                <button class="btn" onclick="addTodo()">해치우자!</button>
+            </div>
+            <h3 style="margin-left: 30px; font-size: 16px; color: #555;">해야 할 일 🔥</h3>
+            <ul id="todo-list"></ul>
+            <h3 style="margin-left: 30px; font-size: 16px; color: #555; margin-top: 30px;">해치운 일 🎉</h3>
+            <ul id="done-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzyLgBD8nM4ntrwLkIg4LZ2jiJApmms_bAkkQJysiG0LGG2nVLLecE66xrJleCajLu0Uw/exec";
+
+        let todos = [];
+        let dones = [];
+
+        const todoListEl = document.getElementById('todo-list');
+        const doneListEl = document.getElementById('done-list');
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const calendarGrid = document.getElementById('calendar-grid');
+        
+        window.onload = function() {
+            fetch(GAS_URL)
+                .then(response => response.json())
+                .then(data => {
+                    if(data.todos) todos = data.todos;
+                    if(data.dones) dones = data.dones;
+                    
+                    renderTodos();
+                    renderDones();
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error("불러오기 실패:", error);
+                    document.getElementById('loading').style.display = 'none';
+                });
+        };
+
+        toggleBtn.addEventListener('click', () => { 
+            sidebar.classList.toggle('open'); 
+            toggleBtn.innerText = sidebar.classList.contains('open') ? '-' : '+';
+        });
+
+        function addTodo() {
+            const what = document.getElementById('what').value;
+            const whom = document.getElementById('whom').value;
+            const when = document.getElementById('when').value;
+            if(!what || !whom || !when) return alert("무엇을, 누구에게, 언제까지 할지 모두 적어주세요! 😊");
+            
+            todos.push({ id: Date.now(), what, whom, when, isUrgent: false, createdAt: new Date().toISOString() });
+            document.getElementById('what').value = document.getElementById('whom').value = document.getElementById('when').value = '';
+            renderTodos();
+            syncWithGAS();
+        }
+
+        function renderTodos() {
+            todoListEl.innerHTML = '';
+            todos.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.draggable = true; li.dataset.index = index;
+                li.addEventListener('dragstart', handleDragStart); 
+                li.addEventListener('dragover', handleDragOver);
+                li.addEventListener('dragleave', handleDragLeave); 
+                li.addEventListener('drop', handleDrop);
+                
+                const fireClass = task.isUrgent ? 'active' : '';
+                
+                li.innerHTML = `
+                    <div class="task-content">
+                        <button class="btn-urgent ${fireClass}" onclick="toggleUrgent(${task.id})" title="급한 일 표시">🔥</button>
+                        <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'what', this.innerText)">${task.what}</span> 
+                        <span>-></span> 
+                        <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'whom', this.innerText)">${task.whom}</span> 
+                        <span style="color:#888;">(<span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'when', this.innerText)">${task.when}</span>)</span>
+                    </div>
+                    <div style="flex-shrink: 0;"> 
+                        <button class="btn btn-done" onclick="completeTask(${task.id})">해치웠다!</button>
+                        <button class="btn btn-del" onclick="deleteTodo(${task.id})">×</button>
+                    </div>
+                `;
+                li.querySelectorAll('.editable').forEach(el => el.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); el.blur(); }}));
+                todoListEl.appendChild(li);
+            });
+        }
+
+        function toggleUrgent(id) {
+            const task = todos.find(t => t.id === id);
+            if(task) {
+                task.isUrgent = !task.isUrgent;
+                renderTodos();
+                syncWithGAS();
+            }
+        }
+
+        function updateTask(id, field, newValue) {
+            const task = todos.find(t => t.id === id);
+            if(task && newValue.trim() !== "") { task[field] = newValue.trim(); syncWithGAS(); } else if (task) renderTodos();
+        }
+
+        function renderDones() {
+            doneListEl.innerHTML = '';
+            [...dones].reverse().forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'task-done-item';
+                li.innerHTML = `
+                    <div class="task-content" style="padding-left: 32px;"> 
+                        <span>${task.what}</span> <span>-></span> <span>${task.whom}</span> <span>(${task.when})</span>
+                    </div>
+                    <div style="flex-shrink: 0;">
+                        <span style="font-size:12px; color:#aaa; margin-right: 10px;">완료</span>
+                        <button class="btn btn-del" onclick="deleteDone(${task.id})" title="기록 지우기">×</button>
+                    </div>
+                `;
+                doneListEl.appendChild(li);
+            });
+            drawCalendar();
+        }
+
+        function completeTask(id) {
+            const taskIndex = todos.findIndex(t => t.id === id);
+            if(taskIndex > -1) {
+                const t = todos.splice(taskIndex, 1)[0];
+                t.completedAt = new Date().toISOString();
+                dones.push(t);
+                renderTodos(); renderDones(); syncWithGAS();
+            }
+        }
+
+        function deleteTodo(id) { todos = todos.filter(t => t.id !== id); renderTodos(); syncWithGAS(); }
+        
+        function deleteDone(id) { 
+            dones = dones.filter(t => t.id !== id); 
+            renderDones(); 
+            syncWithGAS(); 
+        }
+
+        let dragStartIndex;
+        function handleDragStart(e) { dragStartIndex = +e.currentTarget.dataset.index; }
+        
+        function handleDragOver(e) { 
+            e.preventDefault(); 
+            const li = e.currentTarget;
+            const bounding = li.getBoundingClientRect();
+            const offset = bounding.y + (bounding.height / 2);
+            
+            if (e.clientY - offset > 0) {
+                li.classList.add('drag-over-bottom');
+                li.classList.remove('drag-over-top');
+            } else {
+                li.classList.add('drag-over-top');
+                li.classList.remove('drag-over-bottom');
+            }
+        }
+        
+        function handleDragLeave(e) { 
+            e.currentTarget.classList.remove('drag-over-bottom'); 
+            e.currentTarget.classList.remove('drag-over-top'); 
+        }
+        
+        function handleDrop(e) {
+            e.currentTarget.classList.remove('drag-over-bottom');
+            e.currentTarget.classList.remove('drag-over-top');
+            
+            const dragEndIndex = +e.currentTarget.dataset.index;
+            
+            if(dragStartIndex !== dragEndIndex) {
+                const draggedItem = todos.splice(dragStartIndex, 1)[0];
+                todos.splice(dragEndIndex, 0, draggedItem);
+                
+                renderTodos(); syncWithGAS();
+            }
+        }
+
+        let activeDateStr = null;
+        function drawCalendar() {
+            calendarGrid.innerHTML = '';
+            const today = new Date(); const doneCounts = {};
+            dones.forEach(task => {
+                if(!task.completedAt) return;
+                const dateStr = new Date(task.completedAt).toLocaleDateString();
+                doneCounts[dateStr] = (doneCounts[dateStr] || 0) + 1;
+            });
+            for(let i = 34; i >= 0; i--) {
+                const targetDate = new Date(); targetDate.setDate(today.getDate() - i);
+                const dateStr = targetDate.toLocaleDateString(); const count = doneCounts[dateStr] || 0;
+                const box = document.createElement('div'); box.className = 'day-box';
+                const month = targetDate.getMonth() + 1; const date = targetDate.getDate();
+                box.innerText = date === 1 ? `${month}/1` : date;
+                if(count > 0 && count <= 2) box.classList.add('lv-1');
+                else if(count > 2 && count <= 4) box.classList.add('lv-2');
+                else if(count > 4 && count <= 6) box.classList.add('lv-3');
+                else if(count > 6) box.classList.add('lv-4');
+                box.onclick = () => {
+                    const statsDisplay = document.getElementById('today-stats');
+                    if (activeDateStr === dateStr) { statsDisplay.innerText = "달력 칸을 클릭해보세요."; activeDateStr = null; }
+                    else { statsDisplay.innerText = `${month}월 ${date}일 : 총 ${count}개 해치움!`; activeDateStr = dateStr; }
+                };
+                calendarGrid.appendChild(box);
+            }
+        }
+
+        // 💡 텍스트 배열(todos, dones)만 가볍게 동기화
+        function syncWithGAS() {
+            const data = { 
+                todos: todos, 
+                dones: dones
+            };
+            
+            fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(data)
+            }).then(() => {
+                console.log("기록 저장 요청 완료 ✨");
+            }).catch(error => {
+                console.error("앗, 오류가 발생했어요. 다시 확인해볼게요.", error);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -31,29 +31,27 @@
         ul::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
         ul::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
-        /* 💡 항목 간격 더 좁히기 */
         li { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0; border-top: 1px solid transparent; border-bottom: 1px solid transparent; cursor: grab; transition: border 0.1s ease, transform 0.2s ease; box-sizing: border-box; background: #fff;}
         li:active { cursor: grabbing; }
         
         li.drag-over-bottom { border-bottom: 1px solid #555 !important; }
         li.drag-over-top { border-top: 1px solid #555 !important; }
         
-        /* 💡 스와이프 전용 투명 손잡이 (왼쪽에 배치) */
+        /* 💡 투명 손잡이 (안쪽으로 안전하게 배치!) */
         .swipe-handle {
-            width: 20px;
+            width: 30px;
             height: 100%;
             position: absolute;
-            left: -20px; /* 아이템의 왼쪽 바깥으로 살짝 빼둠 */
+            left: 0;
             top: 0;
             background: transparent;
-            z-index: 10;
+            z-index: 20; /* 수정 글씨보다 우선순위 높게 */
         }
         
-        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-right: 10px; margin-left: 5px; pointer-events: none;}
+        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-right: 10px; pointer-events: none;}
         .editable { cursor: text; padding: 0 2px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; pointer-events: auto;}
         .editable:hover, .editable:focus { border-bottom: 1px dashed #aaa; outline: none; }
         
-        /* 해치운 일 전용 스타일 (초 압축) */
         .task-done-item { color: #888; cursor: default; min-height: 20px; margin-bottom: 2px;} 
         .task-done-item .task-content { font-size: 14px; line-height: 0.88; }
         .task-done-item .btn-del { font-size: 16px; padding: 0; }
@@ -97,9 +95,7 @@
             input[type="text"] { font-size: 13px; padding: 3px; }
             .btn { font-size: 13px; padding: 4px 10px; }
             .btn-urgent { font-size: 14px; padding: 0 2px;}
-            
-            li { min-height: 22px; } /* 모바일에서 더 꽉 조임 */
-            
+            li { min-height: 22px; }
             .btn-done-mobile-hide { display: none; }
         }
     </style>
@@ -198,11 +194,13 @@
                 li.addEventListener('dragover', handleDragOver);
                 li.addEventListener('dragleave', handleDragLeave); 
                 li.addEventListener('drop', handleDrop);
-                
+
                 const fireClass = task.isUrgent ? 'active' : '';
                 
+                // 💡 손잡이 공간을 확보하기 위해 task-content에 margin-left: 30px 적용
                 li.innerHTML = `
-                    <div class="swipe-handle"></div> <div class="task-content">
+                    <div class="swipe-handle"></div>
+                    <div class="task-content" style="margin-left: 30px;">
                         <button class="btn-urgent ${fireClass}" onclick="toggleUrgent(${task.id})" title="급한 일 표시" style="pointer-events:auto;">🔥</button>
                         <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'what', this.innerText)">${task.what}</span> 
                         <span>-></span> 
@@ -215,15 +213,13 @@
                     </div>
                 `;
                 
-                // 스와이프 이벤트는 손잡이에만 부착
                 addSwipeListener(li);
-                
                 li.querySelectorAll('.editable').forEach(el => el.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); el.blur(); }}));
                 todoListEl.appendChild(li);
             });
         }
 
-        // 💡 손잡이(swipe-handle)에만 반응하는 스와이프 로직
+        // 💡 손잡이 터치 로직 개선
         function addSwipeListener(li) {
             const handle = li.querySelector('.swipe-handle');
             if(!handle) return;
@@ -232,13 +228,15 @@
             let currentX = 0;
             let isSwiping = false;
 
+            // 터치 시작은 무조건 '손잡이'에서만 발동
             handle.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
                 isSwiping = true;
                 li.style.transition = 'none'; 
             }, {passive: true});
 
-            handle.addEventListener('touchmove', (e) => {
+            // 드래그 중에는 전체 항목(li)을 기준으로 움직임 계산
+            li.addEventListener('touchmove', (e) => {
                 if (!isSwiping) return;
                 currentX = e.touches[0].clientX - startX;
                 
@@ -248,7 +246,7 @@
                 }
             }, {passive: true});
 
-            handle.addEventListener('touchend', (e) => {
+            li.addEventListener('touchend', (e) => {
                 if (!isSwiping) return;
                 isSwiping = false;
                 li.style.transition = 'transform 0.2s ease'; 
@@ -289,8 +287,9 @@
             sortedDones.forEach(task => {
                 const li = document.createElement('li');
                 li.className = 'task-done-item';
+                // 완료 항목은 손잡이가 없으므로 그대로 30px 맞춤 여백 적용
                 li.innerHTML = `
-                    <div class="task-content" style="padding-left: 32px;"> 
+                    <div class="task-content" style="padding-left: 30px;"> 
                         <span>${task.what}</span> <span>-></span> <span>${task.whom}</span> <span>(${task.when})</span>
                     </div>
                     <div style="flex-shrink: 0; pointer-events:auto;">

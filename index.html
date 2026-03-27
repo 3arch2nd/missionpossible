@@ -22,21 +22,19 @@
         .btn-done:hover { background-color: #555; }
         .btn-del { background-color: transparent; color: #ff4d4d; font-size: 18px; padding: 0 5px;}
         
+        /* 🔥 불꽃 버튼의 z-index를 손잡이보다 높여서 터치 가능하게 보장 */
         .btn-urgent { background-color: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s; position: relative; z-index: 30; }
         .btn-urgent.active { opacity: 1; }
         
-        /* 💡 기본 ul 설정 (스크롤 디자인 등 공통 속성) */
-        ul { list-style: none; padding: 0 5px 0 0; margin: 0 0 0 30px; overflow-y: auto; overflow-x: hidden; flex-shrink: 1; }
+        /* 💡 ul 자체의 왼쪽 margin을 없애서 낭비되는 공간 회수! */
+        ul { list-style: none; padding: 0 5px 0 0; margin: 0; overflow-y: auto; overflow-x: hidden; flex-shrink: 1; }
         ul::-webkit-scrollbar { width: 4px; }
         ul::-webkit-scrollbar-track { background: transparent; }
         ul::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
         ul::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
-        /* 💡 해야 할 일 메인 포커스 (공간 대폭 확보) */
         #todo-list { max-height: 45vh; }
-        
-        /* 💡 해치운 일 접기/펴기 기본 설정 */
-        #done-list { display: none; max-height: 20vh; } /* 펴졌을 때도 절반 이하로 제한 */
+        #done-list { display: none; max-height: 20vh; } 
         #done-list.open { display: block; }
         .done-toggle { cursor: pointer; display: inline-block; transition: opacity 0.2s; }
         .done-toggle:hover { opacity: 0.6; }
@@ -47,9 +45,19 @@
         li.drag-over-bottom { border-bottom: 1px solid #555 !important; }
         li.drag-over-top { border-top: 1px solid #555 !important; }
         
-        .swipe-handle { width: 40px; height: 100%; position: absolute; left: 0; top: 0; background: transparent; z-index: 20; }
+        /* 💡 투명 손잡이는 0px 위치(허공)에서 40px 너비를 가짐 (텍스트를 덮지 않음) */
+        .swipe-handle {
+            width: 40px; 
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: transparent;
+            z-index: 20; 
+        }
         
-        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-right: 10px; pointer-events: none; position: relative;}
+        /* 💡 콘텐츠에 padding-left: 30px을 주어 들여쓰기 공간을 만들고, 이 빈 공간에 손잡이가 위치함! */
+        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-left: 30px; padding-right: 10px; pointer-events: none; position: relative;}
         .editable { cursor: text; padding: 0 2px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; pointer-events: auto; position: relative; z-index: 30; }
         .editable:hover, .editable:focus { border-bottom: 1px dashed #aaa; outline: none; }
         
@@ -87,10 +95,9 @@
             #main-content { padding: 15px; }
             .notebook { padding: 30px 15px 20px 15px; }
             .input-group { gap: 5px; margin-left: 20px; width: calc(100% - 20px); }
-            ul { margin-left: 20px; }
-            #todo-list { max-height: 45vh; }
-            #done-list { max-height: 20vh; }
             h3.section-title { margin-left: 20px; font-size: 15px; }
+            /* 💡 모바일에서는 들여쓰기 공간도 20px로 조율 */
+            .task-content { padding-left: 20px; }
         }
 
         @media (max-width: 480px) {
@@ -175,7 +182,6 @@
             toggleBtn.innerText = sidebar.classList.contains('open') ? '-' : '+';
         });
 
-        // 💡 접기/펴기 토글 함수
         function toggleDoneList() {
             const list = document.getElementById('done-list');
             const toggleTitle = document.getElementById('done-toggle');
@@ -214,6 +220,7 @@
 
                 const fireClass = task.isUrgent ? 'active' : '';
                 
+                // 💡 margin-left 인라인 속성 제거! CSS의 padding-left: 30px가 대신 역할을 합니다.
                 li.innerHTML = `
                     <div class="swipe-handle"></div>
                     <div class="task-content">
@@ -299,8 +306,10 @@
             sortedDones.forEach(task => {
                 const li = document.createElement('li');
                 li.className = 'task-done-item';
+                
+                // 💡 완료 목록도 인라인 속성 제거
                 li.innerHTML = `
-                    <div class="task-content" style="padding-left: 30px;"> 
+                    <div class="task-content"> 
                         <span>${task.what}</span> <span>-></span> <span>${task.whom}</span> <span>(${task.when})</span>
                     </div>
                     <div style="flex-shrink: 0; pointer-events:auto;">

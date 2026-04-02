@@ -389,10 +389,10 @@
                 box.className = 'day-box';
                 box.innerText = i;
                 
-                if(count > 0 && count <= 2) box.classList.add('lv-1');
-                else if(count > 2 && count <= 4) box.classList.add('lv-2');
-                else if(count > 4 && count <= 6) box.classList.add('lv-3');
-                else if(count > 6) box.classList.add('lv-4');
+                if(count > 0 && count <= 3) box.classList.add('lv-1');
+                else if(count > 3 && count <= 5) box.classList.add('lv-2');
+                else if(count > 5 && count <= 10) box.classList.add('lv-3');
+                else if(count > 10) box.classList.add('lv-4');
 
                 const displayMonth = month + 1;
                 const displayDateStr = `${year}-${displayMonth}-${i}`;

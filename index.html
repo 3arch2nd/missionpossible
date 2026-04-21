@@ -8,7 +8,6 @@
     <style>
         body { font-family: 'Gowun Dodum', sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; display: flex; height: 100vh; overflow: hidden; color: #333; }
         
-        /* 💡 사이드바 폭을 320px -> 260px (약 80%)로 축소 */
         #sidebar { width: 260px; background-color: rgba(255, 255, 255, 0.95); box-shadow: 2px 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 1000; flex-shrink: 0;}
         #main-content { flex: 1; padding: 40px; display: flex; justify-content: center; overflow: hidden; box-sizing: border-box; }
         
@@ -61,14 +60,13 @@
         
         h3.section-title { margin: 10px 0 5px 30px; font-size: 16px; color: #555; flex-shrink: 0; }
 
-        /* 💡 이미지 비율 조율 (폭에 맞춰 높이도 180px로 살짝 축소) */
         .profile-img { height: 180px; background-color: #eef; border-bottom: 1px solid #eee; background-image: url('assets/1.png'); background-size: cover; background-position: center; background-repeat: no-repeat; }
         
         .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .calendar-nav-btn { background: transparent; border: none; cursor: pointer; font-size: 16px; color: #555; padding: 5px 10px; }
         .calendar-nav-btn:hover { background: #eee; border-radius: 5px; }
 
-        .calendar-container { padding: 20px; }
+        .calendar-container { padding: 20px; display: flex; flex-direction: column;}
         .github-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
         .weekday-header { display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888; margin-bottom: 2px; }
         
@@ -79,11 +77,17 @@
         .lv-2 { background-color: #66b2ff; color: white; }
         .lv-3 { background-color: #0073e6; color: white; }
         .lv-4 { background-color: #004080; color: white; }
+
+        /* 💡 추가된 달력 피드백 컨테이너 스타일 */
+        #daily-done-container { display: none; margin-top: 10px; padding: 5px 0; max-height: 120px; overflow-y: auto; border-top: 1px dashed rgba(0,0,0,0.1); }
+        #daily-done-list { padding: 0; margin: 0; list-style: none; }
+        #daily-done-list li { font-size: 12px; color: #555; padding: 4px 0; background: transparent; border: none; cursor: default; min-height: auto; display: flex; align-items: flex-start; gap: 5px; line-height: 1.3; }
+        #daily-done-container::-webkit-scrollbar { width: 3px; }
+        #daily-done-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
         
         #toggle-btn { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 2000; background: rgba(51, 51, 51, 0.9); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); align-items: center; justify-content: center; }
         #loading { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; flex-direction: column; gap: 10px; }
 
-        /* 💡 토글되는 기준점을 1000px -> 850px 로 낮춰서, 창을 좁혀도 달력+수첩이 최대한 함께 보이도록 설정 */
         @media (max-width: 850px) {
             #toggle-btn { display: flex; }
             #sidebar { position: fixed; height: 100vh; transform: translateX(-100%); background-color: rgba(255, 255, 255, 0.95); }
@@ -120,12 +124,16 @@
                 </h3>
                 <button class="calendar-nav-btn" onclick="changeMonth(1)">▶</button>
             </div>
-            <p id="today-stats" style="font-size: 14px; color: #555; margin-top:5px;">&nbsp;</p>
+            <p id="today-stats" style="font-size: 14px; color: #555; margin-top:5px; margin-bottom: 5px;">&nbsp;</p>
             
             <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px;">
                 <div class="weekday-header">일</div><div class="weekday-header">월</div><div class="weekday-header">화</div><div class="weekday-header">수</div><div class="weekday-header">목</div><div class="weekday-header">금</div><div class="weekday-header">토</div>
             </div>
             <div class="github-calendar" id="calendar-grid" style="margin-top:2px;"></div>
+            
+            <div id="daily-done-container">
+                <ul id="daily-done-list"></ul>
+            </div>
         </div>
     </div>
     <div id="main-content">
@@ -397,14 +405,39 @@
                 const displayMonth = month + 1;
                 const displayDateStr = `${year}-${displayMonth}-${i}`;
                 
+                // 💡 클릭 이벤트 (이 부분이 핵심적으로 수정되었습니다)
                 box.onclick = () => {
                     const statsDisplay = document.getElementById('today-stats');
+                    const dailyContainer = document.getElementById('daily-done-container');
+                    const dailyList = document.getElementById('daily-done-list');
+
                     if (activeDateStr === displayDateStr) { 
                         statsDisplay.innerHTML = "&nbsp;"; 
                         activeDateStr = null; 
+                        dailyContainer.style.display = 'none'; // 비활성화 시 숨김
                     } else { 
                         statsDisplay.innerText = `${displayMonth}월 ${i}일 : 총 ${count}개 해치움!`; 
                         activeDateStr = displayDateStr; 
+
+                        // 완료된 날짜가 클릭한 날짜와 일치하는 데이터 필터링
+                        const dayTasks = dones.filter(task => {
+                            if(!task.completedAt) return false;
+                            const d = new Date(task.completedAt);
+                            return d.getFullYear() === year && d.getMonth() === month && d.getDate() === i;
+                        });
+
+                        // 리스트 렌더링
+                        dailyList.innerHTML = '';
+                        if (dayTasks.length > 0) {
+                            dayTasks.forEach(t => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `<span style="color:#888;">✔️</span> <span style="word-break: break-all;">${t.what} <span style="color:#aaa; font-size: 10px;">(${t.whom})</span></span>`;
+                                dailyList.appendChild(li);
+                            });
+                            dailyContainer.style.display = 'block'; // 데이터가 있을 때만 표시
+                        } else {
+                            dailyContainer.style.display = 'none'; // 해당 날짜에 해치운 일이 없으면 숨김
+                        }
                     }
                 };
                 calendarGrid.appendChild(box);

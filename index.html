@@ -8,20 +8,31 @@
     <style>
         body { font-family: 'Gowun Dodum', sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; display: flex; height: 100vh; overflow: hidden; color: #333; }
         
-        #sidebar { width: 260px; background-color: rgba(255, 255, 255, 0.95); box-shadow: 2px 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 1000; flex-shrink: 0;}
+        #sidebar { width: 260px; background-color: rgba(255, 255, 255, 0.95); box-shadow: 2px 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 1000; flex-shrink: 0; }
         #main-content { flex: 1; padding: 40px; display: flex; justify-content: center; overflow: hidden; box-sizing: border-box; }
         
         .notebook { width: 100%; max-width: 800px; background-color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius: 5px; padding: 50px 40px 30px 40px; background-image: repeating-linear-gradient(transparent, transparent 39px, #eaeaea 39px, #eaeaea 40px); line-height: 40px; position: relative; border-left: 1px solid #ddd; box-sizing: border-box; display: flex; flex-direction: column; height: 100%; }
         .notebook::before { content: ''; position: absolute; left: 10px; top: 20px; bottom: 20px; width: 10px; background-image: radial-gradient(circle, #f4f4f9 4px, transparent 5px); background-size: 10px 40px; }
-        
+
+        /* 수첩 우측 상단 미니멀 동기화 상태 바 */
+        .sync-bar { position: absolute; top: 12px; right: 20px; display: flex; align-items: center; gap: 6px; line-height: normal; z-index: 50; }
+        .sync-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; background: rgba(244, 244, 249, 0.9); border: 1px solid #e2e2ea; font-size: 12px; color: #555; }
+        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; transition: background-color 0.2s; }
+        .sync-dot.syncing { background: #f5a623; animation: syncBlink 1s infinite; }
+        .sync-dot.error { background: #e55353; }
+        @keyframes syncBlink { 50% { opacity: 0.25; } }
+        .refresh-btn { font-family: 'Gowun Dodum', sans-serif; background: rgba(244, 244, 249, 0.9); color: #555; border: 1px solid #e2e2ea; border-radius: 50%; width: 25px; height: 25px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.2s; padding: 0; }
+        .refresh-btn:hover { background: #e8e8f2; color: #222; }
+        .refresh-btn:active { transform: rotate(90deg); }
+
         .input-group { display: flex; gap: 10px; margin-bottom: 20px; margin-left: 30px; width: calc(100% - 30px); box-sizing: border-box; flex-shrink: 0; }
         input[type="text"] { font-family: 'Gowun Dodum', sans-serif; border: none; background: transparent; border-bottom: 1px solid #ccc; outline: none; font-size: 16px; padding: 5px; min-width: 0; }
         
         .btn { font-family: 'Gowun Dodum', sans-serif; background-color: #333; color: white; border: none; padding: 5px 15px; border-radius: 20px; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
         .btn:hover { background-color: #111; }
-        .btn-done { background-color: #777; font-size: 12px; color: white;}
+        .btn-done { background-color: #777; font-size: 12px; color: white; }
         .btn-done:hover { background-color: #555; }
-        .btn-del { background-color: transparent; color: #ff4d4d; font-size: 18px; padding: 0 5px;}
+        .btn-del { background-color: transparent; color: #ff4d4d; font-size: 18px; padding: 0 5px; }
         
         .btn-urgent { background-color: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s; position: relative; z-index: 30; }
         .btn-urgent.active { opacity: 1; }
@@ -42,7 +53,7 @@
         .done-toggle { cursor: pointer; display: inline-block; transition: opacity 0.2s; }
         .done-toggle:hover { opacity: 0.6; }
 
-        li { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0; border-top: 1px solid transparent; border-bottom: 1px solid transparent; cursor: grab; transition: border 0.1s ease, transform 0.2s ease; box-sizing: border-box; background: #fff;}
+        li { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0; border-top: 1px solid transparent; border-bottom: 1px solid transparent; cursor: grab; transition: border 0.1s ease, transform 0.2s ease; box-sizing: border-box; background: #fff; }
         li:active { cursor: grabbing; }
         
         li.drag-over-bottom { border-bottom: 1px solid #555 !important; }
@@ -50,11 +61,11 @@
         
         .swipe-handle { width: 40px; height: 100%; position: absolute; left: 0; top: 0; background: transparent; z-index: 20; }
         
-        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-left: 30px; padding-right: 10px; pointer-events: none; position: relative;}
+        .task-content { flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 3px; word-break: break-all; line-height: 1.2; padding-left: 30px; padding-right: 10px; pointer-events: none; position: relative; }
         .editable { cursor: text; padding: 0 2px; border-bottom: 1px solid transparent; transition: border 0.2s; min-width: 20px; pointer-events: auto; position: relative; z-index: 30; }
         .editable:hover, .editable:focus { border-bottom: 1px dashed #aaa; outline: none; }
         
-        .task-done-item { color: #888; cursor: default; min-height: 20px; margin-bottom: 2px;} 
+        .task-done-item { color: #888; cursor: default; min-height: 20px; margin-bottom: 2px; } 
         .task-done-item .task-content { font-size: 14px; line-height: 0.88; }
         .task-done-item .btn-del { font-size: 16px; padding: 0; }
         
@@ -66,7 +77,7 @@
         .calendar-nav-btn { background: transparent; border: none; cursor: pointer; font-size: 16px; color: #555; padding: 5px 10px; }
         .calendar-nav-btn:hover { background: #eee; border-radius: 5px; }
 
-        .calendar-container { padding: 20px; display: flex; flex-direction: column; flex: 1; overflow-y: auto;}
+        .calendar-container { padding: 20px; display: flex; flex-direction: column; flex: 1; overflow-y: auto; }
         .github-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
         .weekday-header { display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888; margin-bottom: 2px; }
         
@@ -85,31 +96,64 @@
         /* 체력 배터리 컨테이너 스타일 */
         #battery-section { margin-top: auto; padding-top: 20px; display: flex; flex-direction: column; align-items: center; position: relative; }
         
-        /* 💡 수정된 말풍선 스타일: 위치를 더 올렸습니다 (bottom: 105px) */
         #battery-tooltip { position: absolute; bottom: 105px; left: 50%; transform: translateX(-50%) translateY(10px); background: #333; color: #fff; padding: 10px 15px; border-radius: 12px; font-size: 12px; white-space: pre-wrap; word-break: keep-all; text-align: center; max-width: 200px; width: max-content; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.2); line-height: 1.4; }
         #battery-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: #333 transparent transparent transparent; }
         #battery-tooltip.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         
-        /* 배터리 모양 스타일 */
         .battery-container { width: 120px; height: 26px; border: 3px solid #ccc; border-radius: 6px; position: relative; padding: 2px; cursor: pointer; display: flex; align-items: center; margin-bottom: 10px; background: #fff; transition: transform 0.1s; }
         .battery-container:active { transform: scale(0.95); }
         .battery-container::after { content: ''; position: absolute; right: -7px; top: 50%; transform: translateY(-50%); width: 4px; height: 10px; background: #ccc; border-radius: 0 3px 3px 0; }
         
         #energy-fill { height: 100%; background-color: #4caf50; border-radius: 3px; transition: width 0.3s ease, background-color 0.3s ease; }
         
-        /* 조절 슬라이더 스타일 */
-        #energy-slider { width: 120px; cursor: pointer; accent-color: #777; }
-        .slider-label { font-size: 12px; font-weight: bold; color: #777; margin-bottom: 5px; } 
+        #energy-slider { width: 120px; cursor: pointer; accent-color: #555; }
+        .slider-label { font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; } 
 
         #toggle-btn { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 2000; background: rgba(51, 51, 51, 0.9); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); align-items: center; justify-content: center; }
-        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; flex-direction: column; gap: 10px; }
+
+        /* 도넛 로딩 오버레이 (모래시계 대체) */
+        .sync-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(244, 244, 249, 0.72);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            z-index: 9999;
+        }
+        .sync-overlay.open {
+            display: flex;
+        }
+        .sync-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(51, 51, 51, 0.14);
+            border-top-color: #333;
+            border-right-color: #66b2ff;
+            border-radius: 50%;
+            animation: syncSpin 0.8s cubic-bezier(0.5, 0.15, 0.5, 0.85) infinite;
+        }
+        @keyframes syncSpin {
+            to { transform: rotate(360deg); }
+        }
+        .sync-overlay-text {
+            font-size: 15px;
+            font-weight: bold;
+            color: #444;
+            letter-spacing: -0.2px;
+        }
 
         @media (max-width: 850px) {
             #toggle-btn { display: flex; }
             #sidebar { position: fixed; height: 100vh; transform: translateX(-100%); background-color: rgba(255, 255, 255, 0.95); }
             #sidebar.open { transform: translateX(0); }
             #main-content { padding: 15px; }
-            .notebook { padding: 30px 15px 20px 15px; }
+            .notebook { padding: 46px 15px 20px 15px; }
+            .sync-bar { top: 10px; right: 14px; }
             .input-group { gap: 5px; margin-left: 20px; width: calc(100% - 20px); }
             h3.section-title { margin-left: 20px; font-size: 15px; }
             .task-content { padding-left: 20px; }
@@ -119,15 +163,20 @@
             .task-content { font-size: 13px; line-height: 1.1; gap: 3px; }
             input[type="text"] { font-size: 13px; padding: 3px; }
             .btn { font-size: 13px; padding: 4px 10px; }
-            .btn-urgent { font-size: 14px; padding: 0 2px;}
+            .btn-urgent { font-size: 14px; padding: 0 2px; }
             li { min-height: 22px; }
             .btn-done-mobile-hide { display: none; }
             #done-list { padding-bottom: 60px; }
+            .sync-badge { font-size: 11px; padding: 2px 8px; }
+            .refresh-btn { width: 22px; height: 22px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
-    <div id="loading">수첩을 펴는 중입니다... ⏳</div>
+    <div class="sync-overlay open" id="syncOverlay" aria-live="polite" aria-busy="true">
+        <div class="sync-spinner"></div>
+        <div class="sync-overlay-text" id="syncOverlayText">수첩을 펴는 중...</div>
+    </div>
 
     <button id="toggle-btn">+</button>
     <div id="sidebar">
@@ -161,11 +210,19 @@
                 <div class="slider-label" id="energy-label">현재 체력: 100%</div>
                 <input type="range" id="energy-slider" min="0" max="100" step="10" value="100">
             </div>
-
         </div>
     </div>
+
     <div id="main-content">
         <div class="notebook">
+            <div class="sync-bar">
+                <div class="sync-badge">
+                    <span class="sync-dot" id="syncDot"></span>
+                    <span id="syncText">준비됨</span>
+                </div>
+                <button class="refresh-btn" title="지금 즉시 동기화" onclick="manualSync()">↻</button>
+            </div>
+
             <div class="input-group">
                 <input type="text" id="what" placeholder="무엇을" style="flex: 2;">
                 <input type="text" id="whom" placeholder="누구에게" style="flex: 1;">
@@ -182,35 +239,365 @@
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzyLgBD8nM4ntrwLkIg4LZ2jiJApmms_bAkkQJysiG0LGG2nVLLecE66xrJleCajLu0Uw/exec";
+        const STORAGE_KEY = "HAECHIWOTNA_DATA_V6";
+        const POLL_INTERVAL_MS = 5000;
 
-        let todos = [];
-        let dones = [];
+        let syncTimer = null;
+        let pollTimer = null;
+        let isSyncing = false;
+        let isFetching = false;
+        let hasPendingLocalChanges = false;
+        let needsResync = false;
+
+        // 사용자 조작 감지 플래그 (자동 동기화 시 화면 끊김 방지)
+        let isDraggingNow = false;
+        let isSwipingNow = false;
+        let isSlidingEnergy = false;
 
         const todoListEl = document.getElementById('todo-list');
         const doneListEl = document.getElementById('done-list');
         const sidebar = document.getElementById('sidebar');
         const toggleBtn = document.getElementById('toggle-btn');
         const calendarGrid = document.getElementById('calendar-grid');
-        
-        window.onload = function() {
-            fetch(GAS_URL)
-                .then(response => response.json())
-                .then(data => {
-                    if(data.todos) todos = data.todos;
-                    if(data.dones) dones = data.dones;
-                    
-                    renderTodos();
-                    renderDones();
-                    document.getElementById('loading').style.display = 'none';
-                })
-                .catch(error => {
-                    console.error("불러오기 실패:", error);
-                    document.getElementById('loading').style.display = 'none';
-                });
-            
-            // 초기 배터리 상태 설정
-            updateEnergy();
+        const slider = document.getElementById('energy-slider');
+        const fill = document.getElementById('energy-fill');
+        const tooltip = document.getElementById('battery-tooltip');
+        const energyLabel = document.getElementById('energy-label');
+        let tooltipTimer;
+
+        const defaultData = {
+            _rev: 0,
+            _orderUpdatedAt: 0,
+            deletedIds: [],
+            energy: 100,
+            energyUpdatedAt: 0,
+            todos: [],
+            dones: []
         };
+
+        function makeUid() {
+            return 't_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function escapeAttr(str) {
+            return escapeHtml(str).replace(/'/g, '&#39;');
+        }
+
+        function normalizeData(raw) {
+            if (!raw || typeof raw !== 'object') {
+                return JSON.parse(JSON.stringify(defaultData));
+            }
+            const todos = Array.isArray(raw.todos) ? raw.todos.map(t => ({
+                id: String(t.id),
+                what: String(t.what || ''),
+                whom: String(t.whom || ''),
+                when: String(t.when || ''),
+                isUrgent: Boolean(t.isUrgent),
+                createdAt: t.createdAt || new Date().toISOString(),
+                updatedAt: Number(t.updatedAt || (t.createdAt ? new Date(t.createdAt).getTime() : 1) || 1)
+            })) : [];
+
+            const dones = Array.isArray(raw.dones) ? raw.dones.map(d => ({
+                id: String(d.id),
+                what: String(d.what || ''),
+                whom: String(d.whom || ''),
+                when: String(d.when || ''),
+                isUrgent: Boolean(d.isUrgent),
+                createdAt: d.createdAt || '',
+                completedAt: d.completedAt || '',
+                updatedAt: Number(d.updatedAt || (d.completedAt ? new Date(d.completedAt).getTime() : 1) || 1)
+            })) : [];
+
+            return {
+                _rev: Number(raw._rev || 0),
+                _orderUpdatedAt: Number(raw._orderUpdatedAt || 0),
+                deletedIds: Array.isArray(raw.deletedIds) ? raw.deletedIds.map(String) : [],
+                energy: typeof raw.energy === 'number' ? raw.energy : 100,
+                energyUpdatedAt: Number(raw.energyUpdatedAt || 0),
+                todos,
+                dones
+            };
+        }
+
+        // 다중 기기 충돌 방지 병합 로직
+        function mergeAppData(local, remote) {
+            if (!remote || !Array.isArray(remote.todos)) return normalizeData(local);
+            local = normalizeData(local);
+            remote = normalizeData(remote);
+
+            const deletedSet = new Set([...(remote.deletedIds || []), ...(local.deletedIds || [])]);
+
+            // 1. 해치운 일(dones) 병합
+            const doneMap = new Map();
+            remote.dones.forEach(d => {
+                if (!deletedSet.has(d.id)) doneMap.set(d.id, { ...d });
+            });
+            local.dones.forEach(d => {
+                if (deletedSet.has(d.id)) return;
+                const rem = doneMap.get(d.id);
+                if (!rem || (d.updatedAt || 0) >= (rem.updatedAt || 0)) {
+                    doneMap.set(d.id, { ...d });
+                }
+            });
+
+            // 2. 해야 할 일(todos) 병합 (이미 해치웠거나 삭제된 항목은 자동 제외)
+            const localOrderTime = local._orderUpdatedAt || 0;
+            const remoteOrderTime = remote._orderUpdatedAt || 0;
+            const primaryTodos = localOrderTime >= remoteOrderTime ? local.todos : remote.todos;
+            const secondaryTodos = localOrderTime >= remoteOrderTime ? remote.todos : local.todos;
+
+            const todoMap = new Map();
+            remote.todos.forEach(t => {
+                if (!deletedSet.has(t.id) && !doneMap.has(t.id)) todoMap.set(t.id, { ...t });
+            });
+            local.todos.forEach(t => {
+                if (deletedSet.has(t.id) || doneMap.has(t.id)) return;
+                const rem = todoMap.get(t.id);
+                if (!rem || (t.updatedAt || 0) >= (rem.updatedAt || 0)) {
+                    todoMap.set(t.id, { ...t });
+                }
+            });
+
+            const orderedIds = [];
+            primaryTodos.concat(secondaryTodos).forEach(t => {
+                if (todoMap.has(t.id) && !orderedIds.includes(t.id)) {
+                    orderedIds.push(t.id);
+                }
+            });
+
+            // 3. 체력 배터리 병합
+            const useLocalEnergy = (local.energyUpdatedAt || 0) >= (remote.energyUpdatedAt || 0);
+
+            return {
+                _rev: Math.max(local._rev || 0, remote._rev || 0),
+                _orderUpdatedAt: Math.max(localOrderTime, remoteOrderTime),
+                deletedIds: Array.from(deletedSet).slice(-500),
+                energy: useLocalEnergy ? local.energy : remote.energy,
+                energyUpdatedAt: Math.max(local.energyUpdatedAt || 0, remote.energyUpdatedAt || 0),
+                todos: orderedIds.map(id => todoMap.get(id)),
+                dones: Array.from(doneMap.values())
+            };
+        }
+
+        function loadLocalData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try { return normalizeData(JSON.parse(raw)); } catch (e) { console.error(e); }
+            }
+            return JSON.parse(JSON.stringify(defaultData));
+        }
+
+        let appData = loadLocalData();
+
+        function showSyncOverlay(message = '동기화 중...') {
+            const overlay = document.getElementById('syncOverlay');
+            const textEl = document.getElementById('syncOverlayText');
+            if (textEl) textEl.textContent = message;
+            if (overlay) overlay.classList.add('open');
+        }
+
+        function hideSyncOverlay() {
+            const overlay = document.getElementById('syncOverlay');
+            if (overlay) overlay.classList.remove('open');
+        }
+
+        function setSyncStatus(state, text) {
+            const dot = document.getElementById('syncDot');
+            const label = document.getElementById('syncText');
+            dot.className = 'sync-dot ' + (state === 'syncing' ? 'syncing' : state === 'error' ? 'error' : '');
+            label.textContent = text;
+        }
+
+        function isUserInteracting() {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+                return true;
+            }
+            return isDraggingNow || isSwipingNow || isSlidingEnergy;
+        }
+
+        function recordDeletion(id) {
+            const strId = String(id);
+            if (!appData.deletedIds.includes(strId)) {
+                appData.deletedIds.push(strId);
+            }
+        }
+
+        function saveData() {
+            hasPendingLocalChanges = true;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            setSyncStatus('syncing', '저장 대기...');
+
+            if (syncTimer) clearTimeout(syncTimer);
+            syncTimer = setTimeout(() => {
+                syncWithServer();
+            }, 650);
+        }
+
+        function manualSync() {
+            if (syncTimer) clearTimeout(syncTimer);
+            if (hasPendingLocalChanges) {
+                syncWithServer(true, true);
+            } else {
+                fetchFromSheet(true, true);
+            }
+        }
+
+        async function fetchFromSheet(showLoading = false, useOverlay = false, overlayMsg = '동기화 중...') {
+            if (isSyncing || isFetching) {
+                if (useOverlay) hideSyncOverlay();
+                return;
+            }
+            isFetching = true;
+            if (useOverlay) showSyncOverlay(overlayMsg);
+            if (showLoading) setSyncStatus('syncing', '불러오는 중...');
+
+            try {
+                const res = await fetch(GAS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+                const text = await res.text();
+                if (text && text.trim().startsWith('{')) {
+                    const parsed = JSON.parse(text);
+                    const remoteData = normalizeData(parsed);
+
+                    const beforeSnapshot = JSON.stringify({
+                        t: appData.todos,
+                        d: appData.dones,
+                        e: appData.energy
+                    });
+
+                    if (!appData._rev || appData._rev === 0) {
+                        appData = remoteData;
+                    } else {
+                        appData = mergeAppData(appData, remoteData);
+                    }
+
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+
+                    const afterSnapshot = JSON.stringify({
+                        t: appData.todos,
+                        d: appData.dones,
+                        e: appData.energy
+                    });
+
+                    if ((beforeSnapshot !== afterSnapshot || useOverlay) && !isUserInteracting()) {
+                        renderAll();
+                    }
+                    setSyncStatus('ok', '동기화됨');
+                }
+            } catch (err) {
+                console.error("불러오기 실패:", err);
+                if (showLoading) setSyncStatus('error', '오프라인 모드');
+            } finally {
+                isFetching = false;
+                if (useOverlay) hideSyncOverlay();
+            }
+        }
+
+        async function syncWithServer(forceRender = false, useOverlay = false) {
+            if (isSyncing) {
+                needsResync = true;
+                return;
+            }
+            isSyncing = true;
+            if (useOverlay) showSyncOverlay('동기화 중...');
+            setSyncStatus('syncing', '동기화 중...');
+
+            try {
+                // 1. 저장 전 최신 서버 데이터를 먼저 가져와 병합
+                const getRes = await fetch(GAS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+                const getText = await getRes.text();
+                if (getText && getText.trim().startsWith('{')) {
+                    const remoteParsed = JSON.parse(getText);
+                    appData = mergeAppData(appData, remoteParsed);
+                }
+
+                appData._rev = Date.now();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+
+                // 2. 병합된 데이터를 서버로 전송 (서버에서도 LockService로 최종 병합)
+                const postRes = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(appData)
+                });
+                const postText = await postRes.text();
+                if (postText && postText.trim().startsWith('{')) {
+                    const postJson = JSON.parse(postText);
+                    if (postJson.status === 'success' && postJson.data) {
+                        appData = normalizeData(postJson.data);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+                    }
+                }
+
+                hasPendingLocalChanges = false;
+                if (!isUserInteracting() || forceRender) {
+                    renderAll();
+                }
+                setSyncStatus('ok', '동기화됨');
+            } catch (err) {
+                console.error("동기화 오류:", err);
+                setSyncStatus('error', '로컬 저장됨');
+            } finally {
+                isSyncing = false;
+                if (useOverlay) hideSyncOverlay();
+                if (needsResync) {
+                    needsResync = false;
+                    syncWithServer();
+                }
+            }
+        }
+
+        function startAutoPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(() => {
+                if (isUserInteracting() || hasPendingLocalChanges || isSyncing || isFetching) return;
+                fetchFromSheet(false, false);
+            }, POLL_INTERVAL_MS);
+        }
+
+        // 초기 실행 및 화면 복귀 시 실시간 동기화
+        window.addEventListener('DOMContentLoaded', () => {
+            renderAll();
+            fetchFromSheet(true, true, '수첩을 펴는 중...');
+            startAutoPolling();
+
+            // 입력창 Enter 키로 바로 등록 지원
+            ['what', 'whom', 'when'].forEach(id => {
+                document.getElementById(id).addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.isComposing) {
+                        e.preventDefault();
+                        addTodo();
+                    }
+                });
+            });
+        });
+
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted && !isUserInteracting() && !hasPendingLocalChanges) {
+                fetchFromSheet(true, true, '수첩을 동기화하는 중...');
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && !isUserInteracting() && !hasPendingLocalChanges && !isSyncing && !isFetching) {
+                fetchFromSheet(true, true, '최신 기록을 불러오는 중...');
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            if (!isUserInteracting() && !hasPendingLocalChanges && !isSyncing && !isFetching) {
+                fetchFromSheet(false, false);
+            }
+        });
 
         toggleBtn.addEventListener('click', () => { 
             sidebar.classList.toggle('open'); 
@@ -218,185 +605,240 @@
         });
 
         // 배터리 기능 관련 스크립트
-        const slider = document.getElementById('energy-slider');
-        const fill = document.getElementById('energy-fill');
-        const tooltip = document.getElementById('battery-tooltip');
-        const energyLabel = document.getElementById('energy-label');
-        let tooltipTimer;
+        function updateEnergyUI(value) {
+            const numVal = Number(value);
+            slider.value = numVal;
+            fill.style.width = `${numVal}%`;
+            energyLabel.innerText = `현재 체력: ${numVal}%`;
 
-        function updateEnergy() {
-            const value = slider.value;
-            fill.style.width = `${value}%`;
-            
-            // 현재 체력 텍스트 업데이트
-            energyLabel.innerText = `현재 체력: ${value}%`;
-
-            // 색상 변경 로직
-            if(value >= 70) {
-                fill.style.backgroundColor = '#4caf50'; // 초록색
-            } else if (value >= 30) {
-                fill.style.backgroundColor = '#ffc107'; // 노란색
+            if (numVal >= 70) {
+                fill.style.backgroundColor = '#4caf50';
+            } else if (numVal >= 30) {
+                fill.style.backgroundColor = '#ffc107';
             } else {
-                fill.style.backgroundColor = '#f44336'; // 빨간색
+                fill.style.backgroundColor = '#f44336';
             }
 
-// 잎새님 맞춤형 말풍선 텍스트 변경 로직
-if (value == 100) {
-    tooltip.innerText = "최상의 텐션! 어떤 돌발 변수가 생겨도 평정심을 유지하는 갓 튀긴 감자! 🍟";
-} else if (value >= 90) {
-    tooltip.innerText = "활력 최고조! 텐션이 떨어지기 전에 골치 아픈 결정을 미리 내려두세요. 🔥";
-} else if (value >= 80) {
-    tooltip.innerText = "안정적인 텐션.\n오늘 하루 '적당히 친절하고 평화로운 모드' 유지 가능! 👩‍🏫";
-} else if (value >= 70) {
-    tooltip.innerText = "기분 좋은 적당함!\n'선택과 집중'을 발휘하며 유연하게 일과를 굴려볼까요? ⚖️";
-} else if (value >= 60) {
-    tooltip.innerText = "아직은 끄떡없어요.\n교탁 뒤 요새에서 백색소음을 즐길 여유가 충분합니다. 🍵";
-} else if (value >= 50) {
-    tooltip.innerText = "배터리 절반의 법칙. 딱 해야 할 일만 하고 남은 시간은 나의 평화를 위해 씁니다. 🔋";
-} else if (value >= 40) {
-    tooltip.innerText = "집중력이 흐려지는 타이밍. 소소한 딴짓으로 뇌를 환기해야 할 '말랑한 감자'. 🛠️";
-} else if (value >= 30) {
-    tooltip.innerText = "바삭함을 잃고 '눅눅감자'로 변하는 중...\n굳이 지금 안 해도 되는 일은 내일의 나에게 과감하게 토스! 🥔";
-} else if (value >= 20) {
-    tooltip.innerText = "형체 없이 '푹 퍼진 감자' 상태. 그저 멍하니 이 시간이 무사히 흘러가기만을 바랍니다. 🛑";
-} else if (value >= 10) {
-    tooltip.innerText = "비상! 완전 방전 직전!\n마치 교실의 NPC가 된 것처럼 조용히 생존 모드에 돌입하세요. 🫥";
-} else {
-    tooltip.innerText = "생존 배터리 0%. 영혼은 이미 퇴근했습니다.\n침대가 간절하지만... 일단 숨 쉬고 눈 뜨고 있는 것에만 의의를! 👻";
-}
+            if (numVal == 100) {
+                tooltip.innerText = "최상의 텐션! 어떤 돌발 변수가 생겨도 평정심을 유지하는 갓 튀긴 감자! 🍟";
+            } else if (numVal >= 90) {
+                tooltip.innerText = "활력 최고조! 텐션이 떨어지기 전에 골치 아픈 결정을 미리 내려두세요. 🔥";
+            } else if (numVal >= 80) {
+                tooltip.innerText = "안정적인 텐션.\n오늘 하루 '적당히 친절하고 평화로운 모드' 유지 가능! 👩‍🏫";
+            } else if (numVal >= 70) {
+                tooltip.innerText = "기분 좋은 적당함!\n'선택과 집중'을 발휘하며 유연하게 일과를 굴려볼까요? ⚖️";
+            } else if (numVal >= 60) {
+                tooltip.innerText = "아직은 끄떡없어요.\n교탁 뒤 요새에서 백색소음을 즐길 여유가 충분합니다. 🍵";
+            } else if (numVal >= 50) {
+                tooltip.innerText = "배터리 절반의 법칙. 딱 해야 할 일만 하고 남은 시간은 나의 평화를 위해 씁니다. 🔋";
+            } else if (numVal >= 40) {
+                tooltip.innerText = "집중력이 흐려지는 타이밍. 소소한 딴짓으로 뇌를 환기해야 할 '말랑한 감자'. 🛠️";
+            } else if (numVal >= 30) {
+                tooltip.innerText = "바삭함을 잃고 '눅눅감자'로 변하는 중...\n굳이 지금 안 해도 되는 일은 내일의 나에게 과감하게 토스! 🥔";
+            } else if (numVal >= 20) {
+                tooltip.innerText = "형체 없이 '푹 퍼진 감자' 상태. 그저 멍하니 이 시간이 무사히 흘러가기만을 바랍니다. 🛑";
+            } else if (numVal >= 10) {
+                tooltip.innerText = "비상! 완전 방전 직전!\n마치 교실의 NPC가 된 것처럼 조용히 생존 모드에 돌입하세요. 🫥";
+            } else {
+                tooltip.innerText = "생존 배터리 0%. 영혼은 이미 퇴근했습니다.\n침대가 간절하지만... 일단 숨 쉬고 눈 뜨고 있는 것에만 의의를! 👻";
+            }
         }
 
-        // 말풍선을 띄우고 3초 뒤에 숨기는 함수
         function showTooltip() {
             tooltip.classList.add('show');
-            clearTimeout(tooltipTimer); // 기존 타이머 취소
+            clearTimeout(tooltipTimer);
             tooltipTimer = setTimeout(() => {
                 tooltip.classList.remove('show');
-            }, 3000); // 3초 유지
+            }, 3000);
         }
 
-        // 슬라이더를 움직일 때마다 업데이트하고 말풍선 띄우기
+        slider.addEventListener('pointerdown', () => { isSlidingEnergy = true; });
+        slider.addEventListener('pointerup', () => { isSlidingEnergy = false; });
         slider.addEventListener('input', () => {
-            updateEnergy();
+            updateEnergyUI(slider.value);
             showTooltip();
         });
-
+        slider.addEventListener('change', () => {
+            isSlidingEnergy = false;
+            appData.energy = Number(slider.value);
+            appData.energyUpdatedAt = Date.now();
+            saveData();
+        });
 
         function toggleDoneList() {
             const list = document.getElementById('done-list');
             const toggleTitle = document.getElementById('done-toggle');
             list.classList.toggle('open');
-            
-            if (list.classList.contains('open')) {
-                toggleTitle.innerText = '해치운 일 ▲';
-            } else {
-                toggleTitle.innerText = '해치운 일 ▼';
-            }
+            toggleTitle.innerText = list.classList.contains('open') ? '해치운 일 ▲' : '해치운 일 ▼';
+        }
+
+        function renderAll() {
+            renderTodos();
+            renderDones();
+            updateEnergyUI(appData.energy);
         }
 
         function addTodo() {
-            const what = document.getElementById('what').value;
-            const whom = document.getElementById('whom').value;
-            const when = document.getElementById('when').value;
-            if(!what || !whom || !when) return alert("무엇을, 누구에게, 언제까지 할지 모두 적어주세요! 😊");
+            const whatEl = document.getElementById('what');
+            const whomEl = document.getElementById('whom');
+            const whenEl = document.getElementById('when');
+            const what = whatEl.value.trim();
+            const whom = whomEl.value.trim();
+            const when = whenEl.value.trim();
+
+            if (!what || !whom || !when) {
+                return alert("무엇을, 누구에게, 언제까지 할지 모두 적어주세요! 😊");
+            }
             
-            todos.push({ id: Date.now(), what, whom, when, isUrgent: false, createdAt: new Date().toISOString() });
-            document.getElementById('what').value = document.getElementById('whom').value = document.getElementById('when').value = '';
+            const now = Date.now();
+            appData.todos.push({
+                id: makeUid(),
+                what,
+                whom,
+                when,
+                isUrgent: false,
+                createdAt: new Date(now).toISOString(),
+                updatedAt: now
+            });
+            appData._orderUpdatedAt = now;
+
+            whatEl.value = whomEl.value = whenEl.value = '';
+            whatEl.focus();
             renderTodos();
-            syncWithGAS();
+            saveData();
         }
 
         function renderTodos() {
             todoListEl.innerHTML = '';
-            todos.forEach((task, index) => {
+            appData.todos.forEach((task, index) => {
                 const li = document.createElement('li');
-                li.draggable = true; li.dataset.index = index;
-                li.dataset.id = task.id; 
+                li.draggable = true;
+                li.dataset.index = index;
+                li.dataset.id = task.id;
                 
-                li.addEventListener('dragstart', handleDragStart); 
+                li.addEventListener('dragstart', handleDragStart);
+                li.addEventListener('dragend', handleDragEnd);
                 li.addEventListener('dragover', handleDragOver);
-                li.addEventListener('dragleave', handleDragLeave); 
+                li.addEventListener('dragleave', handleDragLeave);
                 li.addEventListener('drop', handleDrop);
 
                 const fireClass = task.isUrgent ? 'active' : '';
+                const safeId = escapeAttr(task.id);
                 
                 li.innerHTML = `
                     <div class="swipe-handle"></div>
                     <div class="task-content">
-                        <button class="btn-urgent ${fireClass}" onclick="toggleUrgent(${task.id})" title="급한 일 표시" style="pointer-events:auto;">🔥</button>
-                        <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'what', this.innerText)">${task.what}</span> 
+                        <button class="btn-urgent ${fireClass}" onclick="toggleUrgent('${safeId}')" title="급한 일 표시" style="pointer-events:auto;">🔥</button>
+                        <span class="editable" contenteditable="true" onblur="updateTask('${safeId}', 'what', this.innerText)">${escapeHtml(task.what)}</span> 
                         <span>-></span> 
-                        <span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'whom', this.innerText)">${task.whom}</span> 
-                        <span style="color:#888;">(<span class="editable" contenteditable="true" onblur="updateTask(${task.id}, 'when', this.innerText)">${task.when}</span>)</span>
+                        <span class="editable" contenteditable="true" onblur="updateTask('${safeId}', 'whom', this.innerText)">${escapeHtml(task.whom)}</span> 
+                        <span style="color:#888;">(<span class="editable" contenteditable="true" onblur="updateTask('${safeId}', 'when', this.innerText)">${escapeHtml(task.when)}</span>)</span>
                     </div>
                     <div style="flex-shrink: 0; z-index:10; pointer-events:auto;"> 
-                        <button class="btn btn-done btn-done-mobile-hide" onclick="completeTask(${task.id})">해치웠다!</button>
-                        <button class="btn btn-del" onclick="deleteTodo(${task.id})">×</button>
+                        <button class="btn btn-done btn-done-mobile-hide" onclick="completeTask('${safeId}')">해치웠다!</button>
+                        <button class="btn btn-del" onclick="deleteTodo('${safeId}')">×</button>
                     </div>
                 `;
                 
                 addSwipeListener(li);
-                li.querySelectorAll('.editable').forEach(el => el.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); el.blur(); }}));
+                li.querySelectorAll('.editable').forEach(el => {
+                    el.addEventListener('keydown', e => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            el.blur();
+                        }
+                    });
+                });
                 todoListEl.appendChild(li);
             });
         }
 
         function addSwipeListener(li) {
             const handle = li.querySelector('.swipe-handle');
-            if(!handle) return;
+            if (!handle) return;
             
             let startX = 0;
+            let startY = 0;
             let currentX = 0;
-            let isSwiping = false;
+            let tracking = false;
+            let horizontalLocked = false;
 
             handle.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
-                isSwiping = true;
-                li.style.transition = 'none'; 
-            }, {passive: true});
+                startY = e.touches[0].clientY;
+                currentX = 0;
+                tracking = true;
+                horizontalLocked = false;
+                isSwipingNow = true;
+                li.style.transition = 'none';
+            }, { passive: true });
 
             handle.addEventListener('touchmove', (e) => {
-                if (!isSwiping) return;
-                currentX = e.touches[0].clientX - startX;
-                
-                if (currentX > 0) {
+                if (!tracking) return;
+                const dx = e.touches[0].clientX - startX;
+                const dy = e.touches[0].clientY - startY;
+
+                if (!horizontalLocked) {
+                    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+                        tracking = false;
+                        isSwipingNow = false;
+                        li.style.transform = 'translateX(0)';
+                        return;
+                    }
+                    if (dx > 8) horizontalLocked = true;
+                }
+
+                if (horizontalLocked && dx > 0) {
+                    currentX = dx;
                     li.style.transform = `translateX(${currentX}px)`;
                 }
-            }, {passive: true});
+            }, { passive: true });
 
-            handle.addEventListener('touchend', (e) => {
-                if (!isSwiping) return;
-                isSwiping = false;
-                li.style.transition = 'transform 0.2s ease'; 
+            const finishSwipe = () => {
+                if (!tracking) return;
+                tracking = false;
+                isSwipingNow = false;
+                li.style.transition = 'transform 0.2s ease';
                 
                 if (currentX > 100) {
-                    const taskId = Number(li.dataset.id);
-                    completeTask(taskId);
+                    completeTask(li.dataset.id);
                 } else {
-                    li.style.transform = `translateX(0)`;
+                    li.style.transform = 'translateX(0)';
                 }
                 currentX = 0;
-            });
+            };
+
+            handle.addEventListener('touchend', finishSwipe);
+            handle.addEventListener('touchcancel', finishSwipe);
         }
 
         function toggleUrgent(id) {
-            const task = todos.find(t => t.id === id);
-            if(task) {
+            const task = appData.todos.find(t => t.id === String(id));
+            if (task) {
                 task.isUrgent = !task.isUrgent;
+                task.updatedAt = Date.now();
                 renderTodos();
-                syncWithGAS();
+                saveData();
             }
         }
 
         function updateTask(id, field, newValue) {
-            const task = todos.find(t => t.id === id);
-            if(task && newValue.trim() !== "") { task[field] = newValue.trim(); syncWithGAS(); } else if (task) renderTodos();
+            const task = appData.todos.find(t => t.id === String(id));
+            if (!task) return;
+            const trimmed = newValue.trim();
+            if (trimmed !== "" && trimmed !== task[field]) {
+                task[field] = trimmed;
+                task.updatedAt = Date.now();
+                saveData();
+            } else if (trimmed === "") {
+                renderTodos();
+            }
         }
 
         function renderDones() {
             doneListEl.innerHTML = '';
             
-            const sortedDones = [...dones].sort((a, b) => {
+            const sortedDones = [...appData.dones].sort((a, b) => {
                 const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
                 const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
                 return dateB - dateA;
@@ -405,58 +847,131 @@ if (value == 100) {
             sortedDones.forEach(task => {
                 const li = document.createElement('li');
                 li.className = 'task-done-item';
+                const safeId = escapeAttr(task.id);
                 li.innerHTML = `
                     <div class="task-content"> 
-                        <span>${task.what}</span> <span>-></span> <span>${task.whom}</span> <span>(${task.when})</span>
+                        <span>${escapeHtml(task.what)}</span> <span>-></span> <span>${escapeHtml(task.whom)}</span> <span>(${escapeHtml(task.when)})</span>
                     </div>
                     <div style="flex-shrink: 0; pointer-events:auto;">
-                        <button class="btn btn-del" onclick="deleteDone(${task.id})" title="기록 지우기">×</button>
+                        <button class="btn btn-del" onclick="deleteDone('${safeId}')" title="기록 지우기">×</button>
                     </div>
                 `;
                 doneListEl.appendChild(li);
             });
-            drawCalendar(); 
+            drawCalendar();
         }
 
         function completeTask(id) {
-            const taskIndex = todos.findIndex(t => t.id === id);
-            if(taskIndex > -1) {
-                const t = todos.splice(taskIndex, 1)[0];
-                t.completedAt = new Date().toISOString();
-                dones.push(t);
-                renderTodos(); renderDones(); syncWithGAS();
+            const strId = String(id);
+            const taskIndex = appData.todos.findIndex(t => t.id === strId);
+            if (taskIndex > -1) {
+                const now = Date.now();
+                const t = appData.todos.splice(taskIndex, 1)[0];
+                t.completedAt = new Date(now).toISOString();
+                t.updatedAt = now;
+                appData.dones.push(t);
+                appData._orderUpdatedAt = now;
+                renderTodos();
+                renderDones();
+                saveData();
             }
         }
 
-        function deleteTodo(id) { todos = todos.filter(t => t.id !== id); renderTodos(); syncWithGAS(); }
-        function deleteDone(id) { dones = dones.filter(t => t.id !== id); renderDones(); syncWithGAS(); }
+        function deleteTodo(id) {
+            const strId = String(id);
+            recordDeletion(strId);
+            appData.todos = appData.todos.filter(t => t.id !== strId);
+            appData._orderUpdatedAt = Date.now();
+            renderTodos();
+            saveData();
+        }
 
+        function deleteDone(id) {
+            const strId = String(id);
+            recordDeletion(strId);
+            appData.dones = appData.dones.filter(d => d.id !== strId);
+            renderDones();
+            saveData();
+        }
+
+        // PC 드래그 앤 드롭 순서 변경
         let dragStartIndex;
-        function handleDragStart(e) { dragStartIndex = +e.currentTarget.dataset.index; }
-        function handleDragOver(e) { 
-            e.preventDefault(); 
-            const li = e.currentTarget;
-            const offset = li.getBoundingClientRect().y + (li.getBoundingClientRect().height / 2);
-            if (e.clientY - offset > 0) { li.classList.add('drag-over-bottom'); li.classList.remove('drag-over-top'); } 
-            else { li.classList.add('drag-over-top'); li.classList.remove('drag-over-bottom'); }
+        function handleDragStart(e) {
+            isDraggingNow = true;
+            dragStartIndex = +e.currentTarget.dataset.index;
         }
-        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over-bottom'); e.currentTarget.classList.remove('drag-over-top'); }
+        function handleDragEnd(e) {
+            isDraggingNow = false;
+            todoListEl.querySelectorAll('li').forEach(el => {
+                el.classList.remove('drag-over-bottom', 'drag-over-top');
+            });
+        }
+        function handleDragOver(e) {
+            e.preventDefault();
+            const li = e.currentTarget;
+            const rect = li.getBoundingClientRect();
+            const offset = rect.y + (rect.height / 2);
+            if (e.clientY - offset > 0) {
+                li.classList.add('drag-over-bottom');
+                li.classList.remove('drag-over-top');
+            } else {
+                li.classList.add('drag-over-top');
+                li.classList.remove('drag-over-bottom');
+            }
+        }
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over-bottom', 'drag-over-top');
+        }
         function handleDrop(e) {
-            e.currentTarget.classList.remove('drag-over-bottom'); e.currentTarget.classList.remove('drag-over-top');
+            e.currentTarget.classList.remove('drag-over-bottom', 'drag-over-top');
             const dragEndIndex = +e.currentTarget.dataset.index;
-            if(dragStartIndex !== dragEndIndex) {
-                const draggedItem = todos.splice(dragStartIndex, 1)[0];
-                todos.splice(dragEndIndex, 0, draggedItem);
-                renderTodos(); syncWithGAS();
+            isDraggingNow = false;
+            if (dragStartIndex !== dragEndIndex) {
+                const draggedItem = appData.todos.splice(dragStartIndex, 1)[0];
+                appData.todos.splice(dragEndIndex, 0, draggedItem);
+                appData._orderUpdatedAt = Date.now();
+                renderTodos();
+                saveData();
             }
         }
 
-        let currentCalDate = new Date(); 
+        // 월별 잔디 달력
+        let currentCalDate = new Date();
         let activeDateStr = null;
 
         function changeMonth(offset) {
             currentCalDate.setMonth(currentCalDate.getMonth() + offset);
+            activeDateStr = null;
+            document.getElementById('today-stats').innerHTML = "&nbsp;";
+            document.getElementById('daily-done-container').style.display = 'none';
             drawCalendar();
+        }
+
+        function renderDailyDoneDetails(year, month, day, count) {
+            const statsDisplay = document.getElementById('today-stats');
+            const dailyContainer = document.getElementById('daily-done-container');
+            const dailyList = document.getElementById('daily-done-list');
+            const displayMonth = month + 1;
+
+            statsDisplay.innerText = `${displayMonth}월 ${day}일 : 총 ${count}개 해치움!`;
+
+            const dayTasks = appData.dones.filter(task => {
+                if (!task.completedAt) return false;
+                const d = new Date(task.completedAt);
+                return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+            });
+
+            dailyList.innerHTML = '';
+            if (dayTasks.length > 0) {
+                dayTasks.forEach(t => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span style="color:#888;">✔️</span> <span style="word-break: break-all;">${escapeHtml(t.what)} <span style="color:#aaa; font-size: 10px;">(${escapeHtml(t.whom)})</span></span>`;
+                    dailyList.appendChild(li);
+                });
+                dailyContainer.style.display = 'block';
+            } else {
+                dailyContainer.style.display = 'none';
+            }
         }
 
         function drawCalendar() {
@@ -468,35 +983,35 @@ if (value == 100) {
             document.getElementById('cal-year').innerText = year;
             document.getElementById('cal-month').innerText = month + 1;
             
-            const firstDay = new Date(year, month, 1).getDay(); 
-            const lastDate = new Date(year, month + 1, 0).getDate(); 
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
             
             const doneCounts = {};
-            dones.forEach(task => {
-                if(!task.completedAt) return;
+            appData.dones.forEach(task => {
+                if (!task.completedAt) return;
                 const d = new Date(task.completedAt);
-                if(d.getFullYear() === year && d.getMonth() === month) {
+                if (d.getFullYear() === year && d.getMonth() === month) {
                     const key = d.getDate();
                     doneCounts[key] = (doneCounts[key] || 0) + 1;
                 }
             });
 
-            for(let i = 0; i < firstDay; i++) {
+            for (let i = 0; i < firstDay; i++) {
                 const emptyBox = document.createElement('div');
                 emptyBox.className = 'day-box empty';
                 calendarGrid.appendChild(emptyBox);
             }
 
-            for(let i = 1; i <= lastDate; i++) {
+            for (let i = 1; i <= lastDate; i++) {
                 const count = doneCounts[i] || 0;
                 const box = document.createElement('div');
                 box.className = 'day-box';
                 box.innerText = i;
                 
-                if(count > 0 && count <= 3) box.classList.add('lv-1');
-                else if(count > 3 && count <= 5) box.classList.add('lv-2');
-                else if(count > 5 && count <= 10) box.classList.add('lv-3');
-                else if(count > 10) box.classList.add('lv-4');
+                if (count > 0 && count <= 3) box.classList.add('lv-1');
+                else if (count > 3 && count <= 5) box.classList.add('lv-2');
+                else if (count > 5 && count <= 10) box.classList.add('lv-3');
+                else if (count > 10) box.classList.add('lv-4');
 
                 const displayMonth = month + 1;
                 const displayDateStr = `${year}-${displayMonth}-${i}`;
@@ -504,51 +1019,26 @@ if (value == 100) {
                 box.onclick = () => {
                     const statsDisplay = document.getElementById('today-stats');
                     const dailyContainer = document.getElementById('daily-done-container');
-                    const dailyList = document.getElementById('daily-done-list');
 
-                    if (activeDateStr === displayDateStr) { 
-                        statsDisplay.innerHTML = "&nbsp;"; 
-                        activeDateStr = null; 
-                        dailyContainer.style.display = 'none'; 
-                    } else { 
-                        statsDisplay.innerText = `${displayMonth}월 ${i}일 : 총 ${count}개 해치움!`; 
-                        activeDateStr = displayDateStr; 
-
-                        const dayTasks = dones.filter(task => {
-                            if(!task.completedAt) return false;
-                            const d = new Date(task.completedAt);
-                            return d.getFullYear() === year && d.getMonth() === month && d.getDate() === i;
-                        });
-
-                        dailyList.innerHTML = '';
-                        if (dayTasks.length > 0) {
-                            dayTasks.forEach(t => {
-                                const li = document.createElement('li');
-                                li.innerHTML = `<span style="color:#888;">✔️</span> <span style="word-break: break-all;">${t.what} <span style="color:#aaa; font-size: 10px;">(${t.whom})</span></span>`;
-                                dailyList.appendChild(li);
-                            });
-                            dailyContainer.style.display = 'block'; 
-                        } else {
-                            dailyContainer.style.display = 'none'; 
-                        }
+                    if (activeDateStr === displayDateStr) {
+                        statsDisplay.innerHTML = "&nbsp;";
+                        activeDateStr = null;
+                        dailyContainer.style.display = 'none';
+                    } else {
+                        activeDateStr = displayDateStr;
+                        renderDailyDoneDetails(year, month, i, count);
                     }
                 };
                 calendarGrid.appendChild(box);
             }
-        }
 
-        function syncWithGAS() {
-            const data = { todos: todos, dones: dones };
-            fetch(GAS_URL, {
-                method: 'POST',
-                mode: 'no-cors', 
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(data)
-            }).then(() => {
-                console.log("기록 저장 요청 완료 ✨");
-            }).catch(error => {
-                console.error("앗, 오류가 발생했어요. 다시 확인해볼게요.", error);
-            });
+            // 백그라운드 동기화 후에도 열려 있던 날짜 상세 기록 자동 갱신
+            if (activeDateStr) {
+                const parts = activeDateStr.split('-').map(Number);
+                if (parts[0] === year && parts[1] === month + 1) {
+                    renderDailyDoneDetails(year, month, parts[2], doneCounts[parts[2]] || 0);
+                }
+            }
         }
     </script>
 </body>

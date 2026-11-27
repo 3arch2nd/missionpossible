@@ -116,7 +116,7 @@
 
         #toggle-btn { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 2000; background: rgba(51, 51, 51, 0.9); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); align-items: center; justify-content: center; }
 
-        /* 도넛 로딩 오버레이 (모래시계 대체) */
+        /* 도넛 로딩 오버레이 */
         .sync-overlay {
             position: fixed;
             inset: 0;
@@ -277,30 +277,6 @@
             cursor: pointer;
         }
         .period-select:focus, .period-date-input:focus { border-color: #5c7fa3; }
-
-        .archive-bar {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            overflow-x: auto;
-            padding-bottom: 2px;
-            scrollbar-width: thin;
-        }
-        .archive-bar-label { font-size: 11px; color: #888; white-space: nowrap; flex-shrink: 0; }
-        .archive-chip {
-            font-size: 11px;
-            padding: 2px 9px;
-            border-radius: 12px;
-            border: 1px solid #dde3ec;
-            background: #f6f8fb;
-            color: #4a5a6e;
-            cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: background 0.15s, border-color 0.15s;
-        }
-        .archive-chip:hover { background: #e8eff8; border-color: #5c7fa3; }
-        .archive-chip.current { background: #5c7fa3; color: #fff; border-color: #5c7fa3; }
 
         .review-body {
             padding: 20px 22px 24px;
@@ -475,6 +451,73 @@
         }
         .review-regen-link:hover { background: #f2f3f7; color: #333; }
 
+        /* 공용 확인/안내 모달 */
+        .dialog-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 34, 45, 0.45);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 6000;
+        }
+        .dialog-backdrop.open { display: flex; }
+
+        .dialog-box {
+            font-family: 'Gowun Dodum', sans-serif;
+            width: 100%;
+            max-width: 340px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+            padding: 22px 22px 18px;
+            box-sizing: border-box;
+            line-height: 1.55;
+        }
+        .dialog-title {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3440;
+        }
+        .dialog-message {
+            margin: 0 0 20px;
+            font-size: 14px;
+            color: #555;
+            word-break: keep-all;
+            white-space: pre-line;
+        }
+        .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .dialog-btn {
+            font-family: 'Gowun Dodum', sans-serif;
+            font-size: 13px;
+            padding: 7px 16px;
+            border-radius: 18px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .dialog-btn-cancel {
+            background: #f2f3f7;
+            color: #555;
+            border: 1px solid #e0e2ea;
+        }
+        .dialog-btn-cancel:hover { background: #e6e8f0; }
+        .dialog-btn-confirm {
+            background: #5c7fa3;
+            color: #fff;
+            border: none;
+        }
+        .dialog-btn-confirm:hover { background: #4a6b8d; }
+        .dialog-btn:focus-visible { outline: 2px solid #5c7fa3; outline-offset: 2px; }
+
         @media (max-width: 850px) {
             #toggle-btn { display: flex; }
             #sidebar { position: fixed; height: 100vh; transform: translateX(-100%); background-color: rgba(255, 255, 255, 0.95); }
@@ -591,17 +634,27 @@
 
                 <div class="review-period-nav">
                     <div class="period-nav-group">
-                        <button class="period-arrow-btn" onclick="shiftReviewPeriod(-1)">◀ 이전</button>
+                        <button class="period-arrow-btn" onclick="shiftReviewPeriod(-1)">◀</button>
                         <span class="period-label-text" id="reviewPeriodLabel"></span>
-                        <button class="period-arrow-btn" onclick="shiftReviewPeriod(1)">다음 ▶</button>
+                        <button class="period-arrow-btn" onclick="shiftReviewPeriod(1)">▶</button>
                     </div>
                     <button class="period-arrow-btn" style="font-size:12px;" onclick="jumpToCurrentPeriod()">오늘 기준</button>
                 </div>
-
-                <div class="archive-bar" id="reviewArchiveBar" style="display:none;"></div>
             </div>
 
             <div class="review-body" id="reviewBody"></div>
+        </div>
+    </div>
+
+    <!-- 공용 확인/안내 모달 -->
+    <div class="dialog-backdrop" id="customDialogModal" onclick="handleDialogBackdropClick(event)">
+        <div class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="customDialogTitle">
+            <h3 class="dialog-title" id="customDialogTitle">확인</h3>
+            <p class="dialog-message" id="customDialogMessage"></p>
+            <div class="dialog-actions">
+                <button class="dialog-btn dialog-btn-cancel" id="customDialogCancelBtn" onclick="closeDialogModal(false)">취소</button>
+                <button class="dialog-btn dialog-btn-confirm" id="customDialogConfirmBtn" onclick="closeDialogModal(true)">확인</button>
+            </div>
         </div>
     </div>
 
@@ -659,6 +712,53 @@
 
         function escapeAttr(str) {
             return escapeHtml(str).replace(/'/g, '&#39;');
+        }
+
+        // ==========================================
+        // 공용 확인/안내 모달 로직
+        // ==========================================
+        let dialogOnConfirm = null;
+
+        function isDialogModalOpen() {
+            const modal = document.getElementById('customDialogModal');
+            return Boolean(modal && modal.classList.contains('open'));
+        }
+
+        function openDialogModal({ title = '확인', message = '', confirmText = '확인', cancelText = '취소', showCancel = true, onConfirm = null }) {
+            document.getElementById('customDialogTitle').textContent = title;
+            document.getElementById('customDialogMessage').textContent = message;
+            const confirmBtn = document.getElementById('customDialogConfirmBtn');
+            const cancelBtn = document.getElementById('customDialogCancelBtn');
+            confirmBtn.textContent = confirmText;
+            cancelBtn.textContent = cancelText;
+            cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+            dialogOnConfirm = onConfirm;
+            document.getElementById('customDialogModal').classList.add('open');
+            requestAnimationFrame(() => confirmBtn.focus());
+        }
+
+        function showAlertModal(title, message) {
+            openDialogModal({
+                title: title || '안내',
+                message,
+                confirmText: '확인',
+                showCancel: false
+            });
+        }
+
+        function closeDialogModal(confirmed) {
+            document.getElementById('customDialogModal').classList.remove('open');
+            const callback = dialogOnConfirm;
+            dialogOnConfirm = null;
+            if (confirmed && typeof callback === 'function') {
+                callback();
+            }
+        }
+
+        function handleDialogBackdropClick(e) {
+            if (e.target && e.target.id === 'customDialogModal') {
+                closeDialogModal(false);
+            }
         }
 
         function normalizeData(raw) {
@@ -796,7 +896,7 @@
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
                 return true;
             }
-            return isDraggingNow || isSwipingNow || isSlidingEnergy || isReviewModalOpen();
+            return isDraggingNow || isSwipingNow || isSlidingEnergy || isReviewModalOpen() || isDialogModalOpen();
         }
 
         function recordDeletion(id) {
@@ -955,8 +1055,12 @@
             });
 
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && isReviewModalOpen()) {
-                    closeReviewModal();
+                if (e.key === 'Escape') {
+                    if (isDialogModalOpen()) {
+                        closeDialogModal(false);
+                    } else if (isReviewModalOpen()) {
+                        closeReviewModal();
+                    }
                 }
             });
         });
@@ -1067,7 +1171,8 @@
             const when = whenEl.value.trim();
 
             if (!what || !whom || !when) {
-                return alert("무엇을, 누구에게, 언제까지 할지 모두 적어주세요! 😊");
+                showAlertModal('입력 확인', '무엇을, 누구에게, 언제까지 할지 모두 적어주세요! 😊');
+                return;
             }
             
             const now = Date.now();
@@ -1428,7 +1533,8 @@
             type: 'weekly', // 'weekly' | 'monthly' | 'yearly'
             anchorDate: new Date(),
             isGenerating: false,
-            isLoadingArchive: false
+            isLoadingArchive: false,
+            hasLoadedArchive: false
         };
 
         let reviewArchiveMap = (() => {
@@ -1511,8 +1617,8 @@
 
         function openReviewModal() {
             document.getElementById('reviewModal').classList.add('open');
-            renderReviewModal();
             loadReviewArchiveFromServer();
+            renderReviewModal();
         }
 
         function closeReviewModal() {
@@ -1536,15 +1642,16 @@
                     if (parsed.status === 'success' && parsed.reviews) {
                         reviewArchiveMap = parsed.reviews;
                         localStorage.setItem(REVIEW_CACHE_KEY, JSON.stringify(reviewArchiveMap));
-                        if (!reviewState.isGenerating) {
-                            renderReviewModal();
-                        }
                     }
                 }
             } catch (err) {
                 console.error('결산 목록 불러오기 실패:', err);
             } finally {
                 reviewState.isLoadingArchive = false;
+                reviewState.hasLoadedArchive = true;
+                if (!reviewState.isGenerating && isReviewModalOpen()) {
+                    renderReviewModal();
+                }
             }
         }
 
@@ -1572,24 +1679,6 @@
         function jumpToCurrentPeriod() {
             if (reviewState.isGenerating) return;
             reviewState.anchorDate = new Date();
-            renderReviewModal();
-        }
-
-        function jumpToArchiveKey(periodKey) {
-            if (reviewState.isGenerating) return;
-            const rec = reviewArchiveMap[periodKey];
-            if (!rec) return;
-            reviewState.type = rec.type;
-            const parts = periodKey.split('_');
-            if (rec.type === 'weekly' && parts[1]) {
-                const [y, m, d] = parts[1].split('-').map(Number);
-                reviewState.anchorDate = new Date(y, m - 1, d);
-            } else if (rec.type === 'monthly' && parts[1]) {
-                const [y, m] = parts[1].split('-').map(Number);
-                reviewState.anchorDate = new Date(y, m - 1, 1);
-            } else if (rec.type === 'yearly' && parts[1]) {
-                reviewState.anchorDate = new Date(Number(parts[1]), 0, 1);
-            }
             renderReviewModal();
         }
 
@@ -1656,31 +1745,6 @@
             renderReviewModal();
         }
 
-        function renderArchiveBar(currentPeriodKey) {
-            const bar = document.getElementById('reviewArchiveBar');
-            const sameTypeKeys = Object.keys(reviewArchiveMap)
-                .filter(k => reviewArchiveMap[k].type === reviewState.type)
-                .sort((a, b) => b.localeCompare(a));
-
-            if (sameTypeKeys.length === 0) {
-                bar.style.display = 'none';
-                bar.innerHTML = '';
-                return;
-            }
-
-            bar.style.display = 'flex';
-            const chips = sameTypeKeys.map(k => {
-                const rec = reviewArchiveMap[k];
-                const activeCls = k === currentPeriodKey ? 'current' : '';
-                const chipText = rec.type === 'weekly'
-                    ? k.replace('weekly_', '') + ' 주'
-                    : rec.label;
-                return `<button class="archive-chip ${activeCls}" onclick="jumpToArchiveKey('${escapeAttr(k)}')">${escapeHtml(chipText)}</button>`;
-            }).join('');
-
-            bar.innerHTML = `<span class="archive-bar-label">저장된 기록:</span>${chips}`;
-        }
-
         function renderReviewModal() {
             document.querySelectorAll('.review-tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.type === reviewState.type);
@@ -1689,7 +1753,6 @@
             const meta = getPeriodMeta(reviewState.type, reviewState.anchorDate);
             document.getElementById('reviewPeriodLabel').textContent = meta.label;
             renderPeriodPicker();
-            renderArchiveBar(meta.periodKey);
 
             const bodyEl = document.getElementById('reviewBody');
 
@@ -1703,35 +1766,45 @@
                 return;
             }
 
+            // 1. 해당 시기의 저장된 결산이 있으면 바로 표시
             const savedRecord = reviewArchiveMap[meta.periodKey];
             if (savedRecord && savedRecord.review) {
                 renderSavedReviewContent(bodyEl, savedRecord);
                 return;
             }
 
+            // 2. 아직 서버에서 저장 목록을 확인 중이라면 생성 버튼 대신 대기 화면 표시
+            if (reviewState.isLoadingArchive && !reviewState.hasLoadedArchive) {
+                bodyEl.innerHTML = `
+                    <div class="review-loading-box">
+                        <div class="sync-spinner"></div>
+                        <div>저장된 결산 기록을 확인하는 중이에요...</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 3. 서버 확인까지 마쳤는데도 기록이 없는 시기일 때만 생성 버튼 표시
             const localCount = countLocalDonesInPeriod(meta.startDate, meta.endDate);
             const startM = Number(meta.startDate.slice(5, 7));
             const endM = Number(meta.endDate.slice(5, 7));
-            const isVac = meta.type !== 'yearly' && isVacationMonth(startM) && isVacationMonth(endM);
+            const mayIncludeVac = meta.type !== 'yearly' && (isVacationMonth(startM) || isVacationMonth(endM));
 
             if (localCount === 0) {
-                const vacMsg = isVac
-                    ? '방학 기간이라 업무 기록이 비어 있어요. 편하게 쉬고 충전한 시기네요.'
+                const emptyMsg = mayIncludeVac
+                    ? '이 시기에 완료로 기록된 업무가 없어요. 방학이나 휴식 기간이었을 수 있어요.'
                     : '이 시기에 완료로 기록된 업무가 아직 없어요.';
                 bodyEl.innerHTML = `
                     <div class="review-empty-state">
                         <div class="review-empty-count">해치운 일 0건</div>
-                        <div class="review-empty-sub">${vacMsg}</div>
+                        <div class="review-empty-sub">${emptyMsg}</div>
                     </div>
                 `;
             } else {
-                const vacSub = isVac
-                    ? '방학 기간 중 챙긴 소중한 기록들을 가볍게 모아 정리해 드릴게요.'
-                    : '한 번 생성해 두면 시트에 영구 기록으로 남아 다음부터는 바로 열람할 수 있어요.';
                 bodyEl.innerHTML = `
                     <div class="review-empty-state">
                         <div class="review-empty-count">이 시기에 <strong>${localCount}건</strong>의 해치운 일이 있어요.</div>
-                        <div class="review-empty-sub">${vacSub}</div>
+                        <div class="review-empty-sub">한 번 생성해 두면 시트에 영구 기록으로 남아 다음부터는 바로 열람할 수 있어요.</div>
                         <button class="review-gen-btn" onclick="requestGenerateReview(false)">이 시기 결산 만들기</button>
                     </div>
                 `;
@@ -1854,9 +1927,14 @@
         }
 
         function confirmRegenerateReview() {
-            if (confirm('이 시기의 결산을 최신 기록 기준으로 다시 생성하고 덮어쓸까요?')) {
-                requestGenerateReview(true);
-            }
+            openDialogModal({
+                title: '결산 다시 분석',
+                message: '이 시기의 결산을 최신 기록 기준으로 다시 생성하고 덮어쓸까요?',
+                confirmText: '다시 분석',
+                cancelText: '취소',
+                showCancel: true,
+                onConfirm: () => requestGenerateReview(true)
+            });
         }
 
         async function requestGenerateReview(forceRegenerate = false) {
@@ -1893,11 +1971,11 @@
                     reviewArchiveMap[result.record.periodKey] = result.record;
                     localStorage.setItem(REVIEW_CACHE_KEY, JSON.stringify(reviewArchiveMap));
                 } else {
-                    alert(result.message || '결산 생성 중 문제가 생겼어요.');
+                    showAlertModal('결산 안내', result.message || '결산 생성 중 문제가 생겼어요.');
                 }
             } catch (err) {
                 console.error('결산 생성 오류:', err);
-                alert('결산을 불러오는 중 통신 오류가 발생했어요. GAS 재배포와 API 키 설정을 확인해 주세요.');
+                showAlertModal('통신 오류', '결산을 불러오는 중 통신 오류가 발생했어요.\nGAS 재배포와 API 키 설정을 확인해 주세요.');
             } finally {
                 reviewState.isGenerating = false;
                 renderReviewModal();

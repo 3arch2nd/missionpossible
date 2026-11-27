@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>해치웠나!</title>
+    <title>해치웠나!</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23FF6B35' d='M34 6 C34 6 48 18 48 34 C48 45 41 56 32 58 C23 56 16 45 16 34 C16 26 20 19 23 16 C22 21 25 25 27 25 C27 18 31 11 34 6 Z'/%3E%3Cpath fill='%23FFD166' d='M33 28 C33 28 40 35 40 43 C40 49 36.5 53 32 54 C27.5 53 24 49 24 43 C24 38 28 33 33 28 Z'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Gowun Dodum', sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; display: flex; height: 100vh; overflow: hidden; color: #333; }
@@ -25,6 +27,8 @@
         .refresh-btn { font-family: 'Gowun Dodum', sans-serif; background: rgba(244, 244, 249, 0.9); color: #555; border: 1px solid #e2e2ea; border-radius: 50%; width: 25px; height: 25px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.2s; padding: 0; }
         .refresh-btn:hover { background: #e8e8f2; color: #222; }
         .refresh-btn:active { transform: rotate(90deg); }
+        .review-trigger-btn { font-family: 'Gowun Dodum', sans-serif; display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; background: rgba(244, 244, 249, 0.9); border: 1px solid #e2e2ea; font-size: 12px; color: #555; cursor: pointer; line-height: inherit; transition: background 0.15s, color 0.15s; }
+        .review-trigger-btn:hover { background: #e8e8f2; color: #222; }
 
         .input-group { display: flex; gap: 10px; margin-bottom: 20px; margin-left: 30px; width: calc(100% - 30px); box-sizing: border-box; flex-shrink: 0; }
         input[type="text"] { font-family: 'Gowun Dodum', sans-serif; border: none; background: transparent; border-bottom: 1px solid #ccc; outline: none; font-size: 16px; padding: 5px; min-width: 0; }
@@ -129,7 +133,7 @@
         .sync-overlay.open {
             display: flex;
         }
-.sync-spinner {
+        .sync-spinner {
             width: 40px;
             height: 40px;
             border: 4px solid rgba(92, 127, 163, 0.2);
@@ -146,6 +150,330 @@
             color: #444;
             letter-spacing: -0.2px;
         }
+
+        /* 주간·월간·연간 결산 모달 */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 34, 45, 0.45);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 5000;
+        }
+        .modal-backdrop.open { display: flex; }
+
+        .review-modal {
+            font-family: 'Gowun Dodum', sans-serif;
+            width: 100%;
+            max-width: 640px;
+            max-height: 88vh;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            line-height: 1.55;
+        }
+        .review-modal button,
+        .review-modal select,
+        .review-modal input {
+            font-family: 'Gowun Dodum', sans-serif;
+        }
+
+        .review-modal-header {
+            padding: 16px 22px;
+            border-bottom: 1px solid #ececf2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafafc;
+        }
+        .review-modal-title { margin: 0; font-size: 17px; color: #2c3440; font-weight: bold; }
+        .modal-close-btn {
+            background: transparent;
+            border: none;
+            font-size: 22px;
+            color: #777;
+            cursor: pointer;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+        .modal-close-btn:hover { background: #ececf2; color: #222; }
+
+        .review-controls {
+            padding: 14px 22px 12px;
+            border-bottom: 1px solid #f0f0f5;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #fff;
+        }
+        .review-type-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .review-type-tabs {
+            display: inline-flex;
+            background: #f1f2f6;
+            padding: 3px;
+            border-radius: 8px;
+        }
+        .review-tab-btn {
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 13px;
+            padding: 5px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .review-tab-btn.active {
+            background: #fff;
+            color: #222;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .review-period-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .period-nav-group { display: flex; align-items: center; gap: 6px; }
+        .period-arrow-btn {
+            background: #f4f5f9;
+            border: 1px solid #e2e4ec;
+            color: #444;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .period-arrow-btn:hover { background: #e8eaf2; }
+        .period-label-text { font-size: 15px; font-weight: bold; color: #2c3440; padding: 0 4px; }
+
+        .period-picker-wrap { display: flex; align-items: center; gap: 6px; }
+        .period-select, .period-date-input {
+            font-size: 12px;
+            color: #444;
+            background: #fafafc;
+            border: 1px solid #dcdfe8;
+            border-radius: 6px;
+            padding: 4px 7px;
+            outline: none;
+            cursor: pointer;
+        }
+        .period-select:focus, .period-date-input:focus { border-color: #5c7fa3; }
+
+        .archive-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            scrollbar-width: thin;
+        }
+        .archive-bar-label { font-size: 11px; color: #888; white-space: nowrap; flex-shrink: 0; }
+        .archive-chip {
+            font-size: 11px;
+            padding: 2px 9px;
+            border-radius: 12px;
+            border: 1px solid #dde3ec;
+            background: #f6f8fb;
+            color: #4a5a6e;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .archive-chip:hover { background: #e8eff8; border-color: #5c7fa3; }
+        .archive-chip.current { background: #5c7fa3; color: #fff; border-color: #5c7fa3; }
+
+        .review-body {
+            padding: 20px 22px 24px;
+            overflow-y: auto;
+            flex: 1;
+            box-sizing: border-box;
+        }
+        .review-body::-webkit-scrollbar { width: 5px; }
+        .review-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+
+        .review-empty-state { text-align: center; padding: 36px 16px; color: #555; }
+        .review-empty-count { font-size: 15px; margin-bottom: 8px; color: #333; }
+        .review-empty-sub { font-size: 13px; color: #777; margin-bottom: 20px; word-break: keep-all; }
+        .review-gen-btn {
+            background: #5c7fa3;
+            color: #fff;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .review-gen-btn:hover { background: #4a6b8d; }
+        .review-gen-btn:disabled { background: #b5c3d1; cursor: not-allowed; }
+
+        .review-loading-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 16px;
+            gap: 14px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .review-headline-card {
+            background: linear-gradient(135deg, #f6f9fc 0%, #eef3f9 100%);
+            border: 1px solid #e1eaf4;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+        }
+        .review-headline { margin: 0 0 8px; font-size: 17px; color: #243447; font-weight: bold; word-break: keep-all; }
+        .review-summary { margin: 0; font-size: 14px; color: #444; word-break: keep-all; }
+
+        .review-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        .stat-card {
+            background: #fafafc;
+            border: 1px solid #eceef4;
+            border-radius: 8px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        .stat-value { font-size: 16px; font-weight: bold; color: #2c3440; }
+        .stat-label { font-size: 11px; color: #777; margin-top: 2px; }
+
+        .review-section { margin-bottom: 18px; }
+        .review-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #3a4a5c;
+            margin: 0 0 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #e5e8ef;
+        }
+
+        .focus-list { display: flex; flex-direction: column; gap: 8px; }
+        .focus-item {
+            background: #fff;
+            border: 1px solid #eaecef;
+            border-left: 3px solid #5c7fa3;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+        .focus-item-title { font-size: 14px; font-weight: bold; color: #2c3440; margin-bottom: 3px; }
+        .focus-item-desc { font-size: 13px; color: #555; margin: 0; word-break: keep-all; }
+
+        .spike-item {
+            background: #fffaf5;
+            border: 1px solid #f5e2cf;
+            border-left: 3px solid #e08e45;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+        .spike-item-title { font-size: 14px; font-weight: bold; color: #7c4714; margin-bottom: 3px; }
+        .spike-item-desc { font-size: 13px; color: #5c4938; margin: 0; word-break: keep-all; }
+
+        .dist-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 4px;
+            height: 86px;
+            padding: 14px 8px 4px;
+            background: #fafafc;
+            border: 1px solid #eceef4;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .dist-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+            min-width: 0;
+        }
+        .dist-bar-wrap {
+            width: 100%;
+            max-width: 24px;
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .dist-bar {
+            width: 100%;
+            background: #7aa0c4;
+            border-radius: 3px 3px 0 0;
+            min-height: 2px;
+            transition: height 0.3s ease;
+        }
+        .dist-bar.vacation { background: #d5dce4; }
+        .dist-bar.peak { background: #416d99; }
+        .dist-count { font-size: 10px; color: #666; margin-bottom: 2px; line-height: 1; }
+        .dist-label { font-size: 10px; color: #777; margin-top: 4px; white-space: nowrap; }
+
+        .review-text-box {
+            font-size: 13.5px;
+            color: #444;
+            background: #fafafc;
+            border-radius: 8px;
+            padding: 11px 14px;
+            margin: 0;
+            word-break: keep-all;
+        }
+        .review-closing {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: #f5f7fa;
+            border-radius: 8px;
+            font-size: 13.5px;
+            color: #3e4e60;
+            word-break: keep-all;
+        }
+        .review-footer-meta {
+            margin-top: 16px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11.5px;
+            color: #999;
+        }
+        .review-regen-link {
+            background: transparent;
+            border: 1px solid #e0e2ea;
+            color: #777;
+            font-size: 11.5px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .review-regen-link:hover { background: #f2f3f7; color: #333; }
 
         @media (max-width: 850px) {
             #toggle-btn { display: flex; }
@@ -168,7 +496,12 @@
             .btn-done-mobile-hide { display: none; }
             #done-list { padding-bottom: 60px; }
             .sync-badge { font-size: 11px; padding: 2px 8px; }
+            .review-trigger-btn { font-size: 11px; padding: 2px 8px; }
             .refresh-btn { width: 22px; height: 22px; font-size: 12px; }
+            .modal-backdrop { padding: 10px; }
+            .review-modal { max-height: 92vh; }
+            .review-modal-header, .review-controls, .review-body { padding-left: 15px; padding-right: 15px; }
+            .review-stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -216,6 +549,7 @@
     <div id="main-content">
         <div class="notebook">
             <div class="sync-bar">
+                <button class="review-trigger-btn" title="주간·월간·연간 결산 보기" onclick="openReviewModal()">결산</button>
                 <div class="sync-badge">
                     <span class="sync-dot" id="syncDot"></span>
                     <span id="syncText">준비됨</span>
@@ -237,9 +571,44 @@
         </div>
     </div>
 
+    <!-- 주간/월간/연간 결산 모달 -->
+    <div class="modal-backdrop" id="reviewModal" onclick="handleModalBackdropClick(event)">
+        <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
+            <div class="review-modal-header">
+                <h2 class="review-modal-title" id="reviewModalTitle">업무 결산</h2>
+                <button class="modal-close-btn" onclick="closeReviewModal()" aria-label="닫기">×</button>
+            </div>
+
+            <div class="review-controls">
+                <div class="review-type-row">
+                    <div class="review-type-tabs">
+                        <button class="review-tab-btn active" data-type="weekly" onclick="switchReviewType('weekly')">주간</button>
+                        <button class="review-tab-btn" data-type="monthly" onclick="switchReviewType('monthly')">월간</button>
+                        <button class="review-tab-btn" data-type="yearly" onclick="switchReviewType('yearly')">연간</button>
+                    </div>
+                    <div class="period-picker-wrap" id="periodPickerWrap"></div>
+                </div>
+
+                <div class="review-period-nav">
+                    <div class="period-nav-group">
+                        <button class="period-arrow-btn" onclick="shiftReviewPeriod(-1)">◀ 이전</button>
+                        <span class="period-label-text" id="reviewPeriodLabel"></span>
+                        <button class="period-arrow-btn" onclick="shiftReviewPeriod(1)">다음 ▶</button>
+                    </div>
+                    <button class="period-arrow-btn" style="font-size:12px;" onclick="jumpToCurrentPeriod()">오늘 기준</button>
+                </div>
+
+                <div class="archive-bar" id="reviewArchiveBar" style="display:none;"></div>
+            </div>
+
+            <div class="review-body" id="reviewBody"></div>
+        </div>
+    </div>
+
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzyLgBD8nM4ntrwLkIg4LZ2jiJApmms_bAkkQJysiG0LGG2nVLLecE66xrJleCajLu0Uw/exec";
         const STORAGE_KEY = "HAECHIWOTNA_DATA_V6";
+        const REVIEW_CACHE_KEY = "HAECHIWOTNA_REVIEWS_V6";
         const POLL_INTERVAL_MS = 5000;
 
         let syncTimer = null;
@@ -417,12 +786,17 @@
             label.textContent = text;
         }
 
+        function isReviewModalOpen() {
+            const modal = document.getElementById('reviewModal');
+            return Boolean(modal && modal.classList.contains('open'));
+        }
+
         function isUserInteracting() {
             const active = document.activeElement;
-            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)) {
                 return true;
             }
-            return isDraggingNow || isSwipingNow || isSlidingEnergy;
+            return isDraggingNow || isSwipingNow || isSlidingEnergy || isReviewModalOpen();
         }
 
         function recordDeletion(id) {
@@ -578,6 +952,12 @@
                         addTodo();
                     }
                 });
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isReviewModalOpen()) {
+                    closeReviewModal();
+                }
             });
         });
 
@@ -1038,6 +1418,489 @@
                 if (parts[0] === year && parts[1] === month + 1) {
                     renderDailyDoneDetails(year, month, parts[2], doneCounts[parts[2]] || 0);
                 }
+            }
+        }
+
+        // ==========================================
+        // 주간 / 월간 / 연간 AI 결산 모달 (GAS v3.0 연동)
+        // ==========================================
+        let reviewState = {
+            type: 'weekly', // 'weekly' | 'monthly' | 'yearly'
+            anchorDate: new Date(),
+            isGenerating: false,
+            isLoadingArchive: false
+        };
+
+        let reviewArchiveMap = (() => {
+            try {
+                const cached = localStorage.getItem(REVIEW_CACHE_KEY);
+                return cached ? JSON.parse(cached) : {};
+            } catch (e) {
+                return {};
+            }
+        })();
+
+        function pad2(n) {
+            return n < 10 ? '0' + n : String(n);
+        }
+
+        function formatLocalYmd(dateObj) {
+            return `${dateObj.getFullYear()}-${pad2(dateObj.getMonth() + 1)}-${pad2(dateObj.getDate())}`;
+        }
+
+        function getMondayOfWeek(dateObj) {
+            const d = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+            const day = d.getDay();
+            const diff = day === 0 ? -6 : 1 - day;
+            d.setDate(d.getDate() + diff);
+            return d;
+        }
+
+        function getPeriodMeta(type, anchorDate) {
+            const y = anchorDate.getFullYear();
+            const m = anchorDate.getMonth();
+
+            if (type === 'weekly') {
+                const mon = getMondayOfWeek(anchorDate);
+                const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+                const thu = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 3);
+                const weekOfMonth = Math.ceil(thu.getDate() / 7);
+                const startDate = formatLocalYmd(mon);
+                const endDate = formatLocalYmd(sun);
+                return {
+                    type: 'weekly',
+                    periodKey: `weekly_${startDate}`,
+                    label: `${thu.getFullYear()}년 ${thu.getMonth() + 1}월 ${weekOfMonth}주차 (${mon.getMonth() + 1}.${mon.getDate()}~${sun.getMonth() + 1}.${sun.getDate()})`,
+                    startDate,
+                    endDate
+                };
+            }
+
+            if (type === 'monthly') {
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const mm = pad2(m + 1);
+                return {
+                    type: 'monthly',
+                    periodKey: `monthly_${y}-${mm}`,
+                    label: `${y}년 ${m + 1}월`,
+                    startDate: `${y}-${mm}-01`,
+                    endDate: `${y}-${mm}-${pad2(lastDay)}`
+                };
+            }
+
+            return {
+                type: 'yearly',
+                periodKey: `yearly_${y}`,
+                label: `${y}년`,
+                startDate: `${y}-01-01`,
+                endDate: `${y}-12-31`
+            };
+        }
+
+        function isVacationMonth(mNum) {
+            return mNum === 1 || mNum === 2 || mNum === 7 || mNum === 8;
+        }
+
+        function countLocalDonesInPeriod(startDate, endDate) {
+            return appData.dones.filter(d => {
+                if (!d.completedAt) return false;
+                const ymd = formatLocalYmd(new Date(d.completedAt));
+                return ymd >= startDate && ymd <= endDate;
+            }).length;
+        }
+
+        function openReviewModal() {
+            document.getElementById('reviewModal').classList.add('open');
+            renderReviewModal();
+            loadReviewArchiveFromServer();
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.remove('open');
+        }
+
+        function handleModalBackdropClick(e) {
+            if (e.target && e.target.id === 'reviewModal') {
+                closeReviewModal();
+            }
+        }
+
+        async function loadReviewArchiveFromServer() {
+            if (reviewState.isLoadingArchive) return;
+            reviewState.isLoadingArchive = true;
+            try {
+                const res = await fetch(GAS_URL + '?action=listReviews&t=' + Date.now(), { cache: 'no-store' });
+                const text = await res.text();
+                if (text && text.trim().startsWith('{')) {
+                    const parsed = JSON.parse(text);
+                    if (parsed.status === 'success' && parsed.reviews) {
+                        reviewArchiveMap = parsed.reviews;
+                        localStorage.setItem(REVIEW_CACHE_KEY, JSON.stringify(reviewArchiveMap));
+                        if (!reviewState.isGenerating) {
+                            renderReviewModal();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('결산 목록 불러오기 실패:', err);
+            } finally {
+                reviewState.isLoadingArchive = false;
+            }
+        }
+
+        function switchReviewType(type) {
+            if (reviewState.isGenerating) return;
+            reviewState.type = type;
+            renderReviewModal();
+        }
+
+        function shiftReviewPeriod(offset) {
+            if (reviewState.isGenerating) return;
+            const d = new Date(reviewState.anchorDate.getTime());
+            if (reviewState.type === 'weekly') {
+                d.setDate(d.getDate() + offset * 7);
+            } else if (reviewState.type === 'monthly') {
+                d.setDate(1);
+                d.setMonth(d.getMonth() + offset);
+            } else {
+                d.setFullYear(d.getFullYear() + offset);
+            }
+            reviewState.anchorDate = d;
+            renderReviewModal();
+        }
+
+        function jumpToCurrentPeriod() {
+            if (reviewState.isGenerating) return;
+            reviewState.anchorDate = new Date();
+            renderReviewModal();
+        }
+
+        function jumpToArchiveKey(periodKey) {
+            if (reviewState.isGenerating) return;
+            const rec = reviewArchiveMap[periodKey];
+            if (!rec) return;
+            reviewState.type = rec.type;
+            const parts = periodKey.split('_');
+            if (rec.type === 'weekly' && parts[1]) {
+                const [y, m, d] = parts[1].split('-').map(Number);
+                reviewState.anchorDate = new Date(y, m - 1, d);
+            } else if (rec.type === 'monthly' && parts[1]) {
+                const [y, m] = parts[1].split('-').map(Number);
+                reviewState.anchorDate = new Date(y, m - 1, 1);
+            } else if (rec.type === 'yearly' && parts[1]) {
+                reviewState.anchorDate = new Date(Number(parts[1]), 0, 1);
+            }
+            renderReviewModal();
+        }
+
+        function getAvailableYears() {
+            const years = new Set([new Date().getFullYear(), reviewState.anchorDate.getFullYear()]);
+            appData.dones.forEach(d => {
+                if (d.completedAt) {
+                    const dt = new Date(d.completedAt);
+                    if (!isNaN(dt.getTime())) years.add(dt.getFullYear());
+                }
+            });
+            Object.keys(reviewArchiveMap).forEach(k => {
+                const m = k.match(/(\d{4})/);
+                if (m) years.add(Number(m[1]));
+            });
+            const minY = Math.min(...years) - 1;
+            const maxY = Math.max(...years);
+            const list = [];
+            for (let y = maxY; y >= minY; y--) list.push(y);
+            return list;
+        }
+
+        function renderPeriodPicker() {
+            const wrap = document.getElementById('periodPickerWrap');
+            const y = reviewState.anchorDate.getFullYear();
+            const m = reviewState.anchorDate.getMonth() + 1;
+            const years = getAvailableYears();
+
+            if (reviewState.type === 'weekly') {
+                const ymd = formatLocalYmd(reviewState.anchorDate);
+                wrap.innerHTML = `<input type="date" class="period-date-input" value="${ymd}" onchange="handleWeekDatePick(this.value)" title="날짜를 선택하면 해당 주로 이동합니다">`;
+            } else if (reviewState.type === 'monthly') {
+                const yearOpts = years.map(yr => `<option value="${yr}" ${yr === y ? 'selected' : ''}>${yr}년</option>`).join('');
+                const monthOpts = Array.from({ length: 12 }, (_, i) => i + 1)
+                    .map(mo => `<option value="${mo}" ${mo === m ? 'selected' : ''}>${mo}월</option>`).join('');
+                wrap.innerHTML = `
+                    <select class="period-select" onchange="handleMonthPick(this.value, null)">${yearOpts}</select>
+                    <select class="period-select" onchange="handleMonthPick(null, this.value)">${monthOpts}</select>
+                `;
+            } else {
+                const yearOpts = years.map(yr => `<option value="${yr}" ${yr === y ? 'selected' : ''}>${yr}년</option>`).join('');
+                wrap.innerHTML = `<select class="period-select" onchange="handleYearPick(this.value)">${yearOpts}</select>`;
+            }
+        }
+
+        function handleWeekDatePick(val) {
+            if (!val || reviewState.isGenerating) return;
+            const [y, m, d] = val.split('-').map(Number);
+            reviewState.anchorDate = new Date(y, m - 1, d);
+            renderReviewModal();
+        }
+
+        function handleMonthPick(newYear, newMonth) {
+            if (reviewState.isGenerating) return;
+            const y = newYear ? Number(newYear) : reviewState.anchorDate.getFullYear();
+            const m = newMonth ? Number(newMonth) - 1 : reviewState.anchorDate.getMonth();
+            reviewState.anchorDate = new Date(y, m, 1);
+            renderReviewModal();
+        }
+
+        function handleYearPick(newYear) {
+            if (!newYear || reviewState.isGenerating) return;
+            reviewState.anchorDate = new Date(Number(newYear), 0, 1);
+            renderReviewModal();
+        }
+
+        function renderArchiveBar(currentPeriodKey) {
+            const bar = document.getElementById('reviewArchiveBar');
+            const sameTypeKeys = Object.keys(reviewArchiveMap)
+                .filter(k => reviewArchiveMap[k].type === reviewState.type)
+                .sort((a, b) => b.localeCompare(a));
+
+            if (sameTypeKeys.length === 0) {
+                bar.style.display = 'none';
+                bar.innerHTML = '';
+                return;
+            }
+
+            bar.style.display = 'flex';
+            const chips = sameTypeKeys.map(k => {
+                const rec = reviewArchiveMap[k];
+                const activeCls = k === currentPeriodKey ? 'current' : '';
+                const chipText = rec.type === 'weekly'
+                    ? k.replace('weekly_', '') + ' 주'
+                    : rec.label;
+                return `<button class="archive-chip ${activeCls}" onclick="jumpToArchiveKey('${escapeAttr(k)}')">${escapeHtml(chipText)}</button>`;
+            }).join('');
+
+            bar.innerHTML = `<span class="archive-bar-label">저장된 기록:</span>${chips}`;
+        }
+
+        function renderReviewModal() {
+            document.querySelectorAll('.review-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === reviewState.type);
+            });
+
+            const meta = getPeriodMeta(reviewState.type, reviewState.anchorDate);
+            document.getElementById('reviewPeriodLabel').textContent = meta.label;
+            renderPeriodPicker();
+            renderArchiveBar(meta.periodKey);
+
+            const bodyEl = document.getElementById('reviewBody');
+
+            if (reviewState.isGenerating) {
+                bodyEl.innerHTML = `
+                    <div class="review-loading-box">
+                        <div class="sync-spinner"></div>
+                        <div>${escapeHtml(meta.label)} 기록을 읽고 정리하는 중이에요...</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const savedRecord = reviewArchiveMap[meta.periodKey];
+            if (savedRecord && savedRecord.review) {
+                renderSavedReviewContent(bodyEl, savedRecord);
+                return;
+            }
+
+            const localCount = countLocalDonesInPeriod(meta.startDate, meta.endDate);
+            const startM = Number(meta.startDate.slice(5, 7));
+            const endM = Number(meta.endDate.slice(5, 7));
+            const isVac = meta.type !== 'yearly' && isVacationMonth(startM) && isVacationMonth(endM);
+
+            if (localCount === 0) {
+                const vacMsg = isVac
+                    ? '방학 기간이라 업무 기록이 비어 있어요. 편하게 쉬고 충전한 시기네요.'
+                    : '이 시기에 완료로 기록된 업무가 아직 없어요.';
+                bodyEl.innerHTML = `
+                    <div class="review-empty-state">
+                        <div class="review-empty-count">해치운 일 0건</div>
+                        <div class="review-empty-sub">${vacMsg}</div>
+                    </div>
+                `;
+            } else {
+                const vacSub = isVac
+                    ? '방학 기간 중 챙긴 소중한 기록들을 가볍게 모아 정리해 드릴게요.'
+                    : '한 번 생성해 두면 시트에 영구 기록으로 남아 다음부터는 바로 열람할 수 있어요.';
+                bodyEl.innerHTML = `
+                    <div class="review-empty-state">
+                        <div class="review-empty-count">이 시기에 <strong>${localCount}건</strong>의 해치운 일이 있어요.</div>
+                        <div class="review-empty-sub">${vacSub}</div>
+                        <button class="review-gen-btn" onclick="requestGenerateReview(false)">이 시기 결산 만들기</button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderSavedReviewContent(container, record) {
+            const s = record.stats || {};
+            const r = record.review || {};
+            const dist = Array.isArray(s.distribution) ? s.distribution : [];
+            const maxVal = Math.max(1, ...dist.map(d => Number(d.count || 0)));
+
+            const distHtml = dist.length > 0 ? `
+                <div class="dist-chart">
+                    ${dist.map(d => {
+                        const cnt = Number(d.count || 0);
+                        const h = cnt > 0 ? Math.max(10, Math.round((cnt / maxVal) * 100)) : 3;
+                        const barCls = d.isVacation ? 'vacation' : (cnt === maxVal && cnt > 0 ? 'peak' : '');
+                        return `
+                            <div class="dist-col">
+                                <div class="dist-count">${cnt > 0 ? cnt : ''}</div>
+                                <div class="dist-bar-wrap">
+                                    <div class="dist-bar ${barCls}" style="height:${h}%;" title="${escapeAttr(d.label)}: ${cnt}건"></div>
+                                </div>
+                                <div class="dist-label">${escapeHtml(d.label)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : '';
+
+            const focusItems = Array.isArray(r.mainFocus) ? r.mainFocus : [];
+            const focusHtml = focusItems.length > 0 ? `
+                <div class="review-section">
+                    <h4 class="review-section-title">주로 몰두한 업무</h4>
+                    <div class="focus-list">
+                        ${focusItems.map(item => `
+                            <div class="focus-item">
+                                <div class="focus-item-title">${escapeHtml(item.theme)}</div>
+                                <p class="focus-item-desc">${escapeHtml(item.description)}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const spikeItems = Array.isArray(r.suddenSpikes) ? r.suddenSpikes : [];
+            const spikeHtml = spikeItems.length > 0 ? `
+                <div class="review-section">
+                    <h4 class="review-section-title">갑자기 등장하거나 유독 몰린 업무</h4>
+                    <div class="focus-list">
+                        ${spikeItems.map(item => `
+                            <div class="spike-item">
+                                <div class="spike-item-title">${escapeHtml(item.title)}</div>
+                                <p class="spike-item-desc">${escapeHtml(item.reason)}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const routineHtml = r.routineKeepers ? `
+                <div class="review-section">
+                    <h4 class="review-section-title">꾸준히 챙긴 루틴</h4>
+                    <p class="review-text-box">${escapeHtml(r.routineKeepers)}</p>
+                </div>
+            ` : '';
+
+            const busiestDisplay = s.busiestDate
+                ? `${Number(s.busiestDate.slice(5, 7))}.${Number(s.busiestDate.slice(8, 10))} (${s.busiestCount}건)`
+                : '-';
+
+            const createdDisplay = record.createdAt
+                ? new Date(record.createdAt).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : '';
+
+            container.innerHTML = `
+                <div class="review-headline-card">
+                    <h3 class="review-headline">${escapeHtml(r.headline || record.label + ' 결산')}</h3>
+                    <p class="review-summary">${escapeHtml(r.summary || '')}</p>
+                </div>
+
+                <div class="review-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${s.totalCount ?? 0}건</div>
+                        <div class="stat-label">해치운 일</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${s.activeDays ?? 0}일</div>
+                        <div class="stat-label">활동한 날</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${busiestDisplay}</div>
+                        <div class="stat-label">최대 집중일</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${s.urgentRatio ?? 0}%</div>
+                        <div class="stat-label">급한 일 비중</div>
+                    </div>
+                </div>
+
+                ${focusHtml}
+                ${spikeHtml}
+
+                <div class="review-section">
+                    <h4 class="review-section-title">집중 밀도와 업무 리듬</h4>
+                    ${distHtml}
+                    <p class="review-text-box">${escapeHtml(r.densityAnalysis || '')}</p>
+                </div>
+
+                ${routineHtml}
+
+                ${r.closingNote ? `<div class="review-closing">${escapeHtml(r.closingNote)}</div>` : ''}
+
+                <div class="review-footer-meta">
+                    <span>기록 생성: ${escapeHtml(createdDisplay)}</span>
+                    <button class="review-regen-link" onclick="confirmRegenerateReview()">다시 분석</button>
+                </div>
+            `;
+        }
+
+        function confirmRegenerateReview() {
+            if (confirm('이 시기의 결산을 최신 기록 기준으로 다시 생성하고 덮어쓸까요?')) {
+                requestGenerateReview(true);
+            }
+        }
+
+        async function requestGenerateReview(forceRegenerate = false) {
+            if (reviewState.isGenerating) return;
+            const meta = getPeriodMeta(reviewState.type, reviewState.anchorDate);
+
+            reviewState.isGenerating = true;
+            renderReviewModal();
+
+            try {
+                if (hasPendingLocalChanges) {
+                    if (syncTimer) clearTimeout(syncTimer);
+                    await syncWithServer(false, false);
+                }
+
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'generateReview',
+                        periodKey: meta.periodKey,
+                        type: meta.type,
+                        label: meta.label,
+                        startDate: meta.startDate,
+                        endDate: meta.endDate,
+                        forceRegenerate
+                    })
+                });
+
+                const text = await res.text();
+                const result = JSON.parse(text);
+
+                if (result.status === 'success' && result.record) {
+                    reviewArchiveMap[result.record.periodKey] = result.record;
+                    localStorage.setItem(REVIEW_CACHE_KEY, JSON.stringify(reviewArchiveMap));
+                } else {
+                    alert(result.message || '결산 생성 중 문제가 생겼어요.');
+                }
+            } catch (err) {
+                console.error('결산 생성 오류:', err);
+                alert('결산을 불러오는 중 통신 오류가 발생했어요. GAS 재배포와 API 키 설정을 확인해 주세요.');
+            } finally {
+                reviewState.isGenerating = false;
+                renderReviewModal();
             }
         }
     </script>

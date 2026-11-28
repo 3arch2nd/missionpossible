@@ -1297,16 +1297,29 @@
             handle.addEventListener('touchcancel', finishSwipe);
         }
 
-        function toggleUrgent(id) {
-            const task = appData.todos.find(t => t.id === String(id));
-            if (task) {
+function toggleUrgent(id) {
+            const taskIndex = appData.todos.findIndex(t => t.id === String(id));
+            if (taskIndex > -1) {
+                const task = appData.todos[taskIndex];
+                const now = Date.now();
                 task.isUrgent = !task.isUrgent;
-                task.updatedAt = Date.now();
+                task.updatedAt = now;
+
+                if (task.isUrgent) {
+                    appData.todos.splice(taskIndex, 1);
+                    const firstNormalIndex = appData.todos.findIndex(t => !t.isUrgent);
+                    if (firstNormalIndex === -1) {
+                        appData.todos.push(task);
+                    } else {
+                        appData.todos.splice(firstNormalIndex, 0, task);
+                    }
+                    appData._orderUpdatedAt = now; // 다른 기기에도 바뀐 순서가 동기화되도록 기록
+                }
+
                 renderTodos();
                 saveData();
             }
         }
-
         function updateTask(id, field, newValue) {
             const task = appData.todos.find(t => t.id === String(id));
             if (!task) return;
